@@ -170,4 +170,57 @@ exports.handler = async function(event) {
     }
 
     const rawText = params.text;
-    con
+    const lines = rawText.split('|');
+    const totalTextBlockHeight = (lines.length - 1) * (constants.lineHeight * fontSize) + fontSize;
+    const height = Math.round(totalTextBlockHeight + (constants.paddingY * 2));
+    const backgroundContent = generateBackgroundSVG(params.bg, constants.width, height);
+    const startY = Math.round((height / 2) - (totalTextBlockHeight / 2) + (fontSize * 0.8));
+
+    const textElements = lines.map((line, index) => {
+      const innerContent = parseBoldText(line);
+      const dy = index > 0 ? `dy="${constants.lineHeight}em"` : '';
+      return `<tspan x="${x}" ${dy}>${innerContent}</tspan>`;
+    }).join('');
+
+    const mainTextStyle = `paint-order="stroke" stroke="#000000" stroke-width="2px" stroke-linejoin="round"`;
+
+    const svg = `
+      <svg width="${constants.width}" height="${height}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${escapeSVG(rawText)}">
+        <style>
+          text { white-space: pre; }
+        </style>
+        ${backgroundContent}
+        <text
+          y="${startY}"
+          font-family="sans-serif"
+          font-size="${fontSize}px"
+          fill="${textColor}"
+          text-anchor="${textAnchor}"
+          ${mainTextStyle}
+        >
+          ${textElements}
+        </text>
+      </svg>
+    `;
+
+    return {
+      statusCode: 200,
+      headers: { 
+        'Content-Type': 'image/svg+xml',
+        // 캐시를 사용하지 않도록 헤더 변경
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      },
+      body: svg.trim(),
+    };
+  } catch (err) {
+    console.error("SVG Generation Error:", err);
+    const errorSvg = `<svg width="400" height="200" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="#f8d7da" /><text x="10" y="50%" font-family="monospace" font-size="16" fill="#721c24" dominant-baseline="middle">Error: ${escapeSVG(err.message)}</text></svg>`;
+    return { 
+      statusCode: 500,
+      headers: { 'Content-Type': 'image/svg+xml' },
+      body: errorSvg.trim()
+    };
+  }
+};
