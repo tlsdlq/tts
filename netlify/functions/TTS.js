@@ -28,55 +28,117 @@ function generateBackgroundSVG(bgType, width, height) {
     case 'kuro':
       const kuroDefs = `
         <defs>
-          <filter id="kuro-effect" x="-50%" y="-50%" width="200%" height="200%">
-            <!-- 1. 넓게 퍼지는 보라색 외부 광선 (Halo) -->
-            <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="glow-blur" />
-            <feFlood flood-color="#7b42f5" result="glow-color"/>
-            <feComposite in="glow-color" in2="glow-blur" operator="in" result="glow-outer"/>
-            
-            <!-- 2. 미세한 붉은색 색수차 효과 (Chromatic Aberration) -->
-            <feOffset in="SourceGraphic" dx="1.5" dy="1.5" result="offset-source" />
-            <feGaussianBlur in="offset-source" stdDeviation="5" result="glow-blur-red" />
-            <feFlood flood-color="#ff3131" flood-opacity="0.5" result="glow-color-red"/>
-            <feComposite in="glow-color-red" in2="glow-blur-red" operator="in" result="glow-red-edge"/>
-            
-            <!-- 3. 선 내부의 전기 질감 (Plasma Texture) -->
-            <feTurbulence type="fractalNoise" baseFrequency="0.03 0.4" numOctaves="2" seed="${seed}" result="turbulence"/>
-            <feComposite operator="in" in="turbulence" in2="SourceGraphic"/>
-            <feColorMatrix type="matrix" values="1 0 0 0 0
-                                                 0 1 0 0 0
-                                                 0 0 10 0 0
-                                                 0 0 0 1.2 -0.1" result="plasma-texture" />
-            
-            <!-- 4. 모든 레이어 병합 -->
-            <feMerge>
-              <feMergeNode in="glow-outer" />
-              <feMergeNode in="glow-red-edge" />
-              <feMergeNode in="plasma-texture" />
-              <feMergeNode in="SourceGraphic" /> 
+          <!-- 네온 글로우 효과를 위한 필터 -->
+          <filter id="neonGlow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+            <feMerge> 
+              <feMergeNode in="coloredBlur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+          
+          <!-- 강한 글로우 효과 -->
+          <filter id="strongGlow" x="-100%" y="-100%" width="300%" height="300%">
+            <feGaussianBlur stdDeviation="6" result="bigBlur"/>
+            <feGaussianBlur stdDeviation="2" result="smallBlur"/>
+            <feMerge> 
+              <feMergeNode in="bigBlur"/>
+              <feMergeNode in="smallBlur"/>
+              <feMergeNode in="SourceGraphic"/>
             </feMerge>
           </filter>
         </defs>
       `;
       
-      let kuroContent = `<rect width="${width}" height="${height}" fill="#000000" />`;
+      let kuroContent = `<rect width="${width}" height="${height}" fill="#000008" />`;
       kuroContent += kuroDefs;
 
-      // --- 격자 기반 경로 생성 로직 ---
-      const gridSize = 45;
+      // --- 동적 미로 패턴 생성 로직 ---
+      const scale = Math.min(width, height) / 800; // 크기에 따른 스케일링
+      const baseSize = 40 * scale;
+      
+      // 메인 미로 구조 - 굵은 선들
       let pathData = '';
-      for (let y = gridSize; y < height - gridSize; y += gridSize) {
-          for (let x = gridSize; x < width - gridSize; x += gridSize) {
-              if (Math.random() > 0.4) { // 60% 확률로 가로선 생성
-                  pathData += ` M ${x} ${y} h ${gridSize}`;
-              }
-              if (Math.random() > 0.4) { // 60% 확률로 세로선 생성
-                  pathData += ` M ${x} ${y} v ${gridSize}`;
-              }
-          }
+      
+      // 외곽 프레임
+      const margin = baseSize;
+      pathData += `M${margin} ${margin} L${margin} ${height - margin} L${width - margin} ${height - margin} L${width - margin} ${margin} L${margin} ${margin}`;
+      
+      // 상단 복잡한 구조
+      const step = baseSize * 0.8;
+      for (let i = 0; i < 5; i++) {
+        const startX = margin + (width - 2 * margin) * (i / 5);
+        const endX = startX + (width - 2 * margin) / 6;
+        const y1 = margin + step * (1 + Math.random());
+        const y2 = y1 + step * (1 + Math.random() * 0.5);
+        
+        if (Math.random() > 0.3) {
+          pathData += ` M${startX} ${y1} L${endX} ${y1} L${endX} ${y2}`;
+        }
       }
       
-      kuroContent += `<path d="${pathData}" fill="none" stroke="#e9e3ff" stroke-width="8" stroke-linecap="round" filter="url(#kuro-effect)" />`;
+      // 중앙 영역의 복잡한 패턴
+      const centerY = height / 2;
+      const sections = 6;
+      for (let i = 0; i < sections; i++) {
+        const x = margin + (width - 2 * margin) * (i / sections);
+        const nextX = margin + (width - 2 * margin) * ((i + 1) / sections);
+        const midX = (x + nextX) / 2;
+        
+        // 수직선
+        if (Math.random() > 0.4) {
+          const startY = centerY - step * (1 + Math.random());
+          const endY = centerY + step * (1 + Math.random());
+          pathData += ` M${midX} ${startY} L${midX} ${endY}`;
+        }
+        
+        // 수평선
+        if (Math.random() > 0.3) {
+          const y = centerY + (Math.random() - 0.5) * step * 2;
+          pathData += ` M${x} ${y} L${nextX} ${y}`;
+        }
+        
+        // L자 형태 연결
+        if (Math.random() > 0.5) {
+          const cornerY = centerY + (Math.random() - 0.5) * step;
+          pathData += ` M${x} ${cornerY} L${midX} ${cornerY} L${midX} ${cornerY + step}`;
+        }
+      }
+      
+      // 하단 구조
+      const bottomY = height - margin - step;
+      for (let i = 0; i < 4; i++) {
+        const x1 = margin + (width - 2 * margin) * (i / 4);
+        const x2 = x1 + (width - 2 * margin) / 5;
+        const y1 = bottomY - step * Math.random();
+        
+        if (Math.random() > 0.4) {
+          pathData += ` M${x1} ${y1} L${x2} ${y1} L${x2} ${bottomY}`;
+        }
+      }
+      
+      // 추가 연결부들
+      for (let i = 0; i < 8; i++) {
+        const x = margin + Math.random() * (width - 2 * margin);
+        const y = margin + Math.random() * (height - 2 * margin);
+        const length = step * (0.5 + Math.random() * 0.5);
+        
+        if (Math.random() > 0.5) {
+          // 수평선
+          pathData += ` M${x} ${y} L${x + length} ${y}`;
+        } else {
+          // 수직선
+          pathData += ` M${x} ${y} L${x} ${y + length}`;
+        }
+      }
+      
+      // 메인 미로 패턴 (굵은 선)
+      const strokeWidth = Math.max(4, 8 * scale);
+      kuroContent += `<path d="${pathData}" fill="none" stroke="#cc77ff" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round" filter="url(#strongGlow)" />`;
+      
+      // 밝은 코어 라인
+      const coreWidth = Math.max(1, 2 * scale);
+      kuroContent += `<path d="${pathData}" fill="none" stroke="#ffffff" stroke-width="${coreWidth}" stroke-linecap="round" stroke-linejoin="round" filter="url(#neonGlow)" opacity="0.9" />`;
       
       return kuroContent;
 
