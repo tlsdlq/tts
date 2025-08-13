@@ -25,51 +25,82 @@ function generateBackgroundSVG(bgType, width, height) {
       let starsContent = '';
       const defs = `
         <defs>
-          <radialGradient id="galaxyCore" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stop-color="#F8F0C4" stop-opacity="0.3" />
-            <stop offset="60%" stop-color="#A18CD1" stop-opacity="0.1" />
-            <stop offset="100%" stop-color="#3f2b4b" stop-opacity="0" />
+          <radialGradient id="cloud1" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#D2B48C" stop-opacity="0.25" />
+            <stop offset="100%" stop-color="#D2B48C" stop-opacity="0" />
           </radialGradient>
-          <radialGradient id="dustLane" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stop-color="#000000" stop-opacity="0.6" />
-            <stop offset="80%" stop-color="#000000" stop-opacity="0" />
+          <radialGradient id="cloud2" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#F0E68C" stop-opacity="0.15" />
+            <stop offset="100%" stop-color="#F0E68C" stop-opacity="0" />
           </radialGradient>
-          <filter id="starGlow">
-            <feGaussianBlur stdDeviation="1.2" />
+          <filter id="brightStarGlow">
+            <feGaussianBlur stdDeviation="1.5" />
           </filter>
         </defs>
       `;
       starsContent += defs;
-      starsContent += `<rect width="${width}" height="${height}" fill="#020111" />`;
+      starsContent += `<rect width="${width}" height="${height}" fill="#000000" />`;
 
-      // 은하수 띠와 성간 먼지 그리기
-      starsContent += `<ellipse cx="${width / 2}" cy="${height / 2}" rx="${width / 1.5}" ry="${height / 8}" fill="url(#galaxyCore)" />`;
-      starsContent += `<ellipse cx="${width / 2 + 50}" cy="${height / 2 - 10}" rx="${width / 3}" ry="${height / 12}" fill="url(#dustLane)" />`;
-
-      // 별 생성
-      const totalStarIterations = 800;
-      const bandStartY = height * 0.35;
-      const bandEndY = height * 0.65;
-
-      for (let i = 0; i < totalStarIterations; i++) {
-        const y = Math.random() * height;
-        const isInBand = y > bandStartY && y < bandEndY;
-        
-        // 은하수 띠 안쪽에 별 생성 확률 높임
-        if (isInBand && Math.random() < 0.7 || !isInBand && Math.random() < 0.1) {
-          const x = Math.random() * width;
-          const isBright = isInBand && Math.random() < 0.2;
-          const r = isBright ? Math.random() * 1.5 + 0.8 : Math.random() * 0.7 + 0.1;
-          const opacity = Math.random() * 0.8 + 0.2;
-          const color = isBright ? '#ffffff' : '#e0e0ff';
-          starsContent += `<circle cx="${x}" cy="${y}" r="${r}" fill="${color}" opacity="${opacity}" ${isBright ? 'filter="url(#starGlow)"' : ''} />`;
-        }
+      // [개선] 유기적인 은하수 성운 그리기
+      for (let i = 0; i < 15; i++) {
+        const cx = width * 0.2 + Math.random() * width * 0.6;
+        const cy = height * 0.3 + Math.random() * height * 0.4;
+        const rx = width * 0.1 + Math.random() * width * 0.2;
+        const ry = height * 0.05 + Math.random() * height * 0.1;
+        const opacity = Math.random() * 0.5 + 0.2;
+        const rotation = Math.random() * 180;
+        const fill = Math.random() > 0.5 ? 'url(#cloud1)' : 'url(#cloud2)';
+        starsContent += `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="${fill}" opacity="${opacity}" transform="rotate(${rotation} ${cx} ${cy})" />`;
       }
+      
+      // [개선] 별 다층 구조 생성
+      // 1. 은하 먼지 (Galactic Dust)
+      for (let i = 0; i < 2000; i++) {
+        const x = Math.random() * width;
+        const y = height * 0.2 + Math.random() * height * 0.6;
+        const r = Math.random() * 0.4;
+        const opacity = Math.random() * 0.5 + 0.1;
+        starsContent += `<circle cx="${x}" cy="${y}" r="${r}" fill="#ffffff" opacity="${opacity}" />`;
+      }
+      // 2. 일반 별 (Field Stars)
+      for (let i = 0; i < 300; i++) {
+        const x = Math.random() * width;
+        const y = Math.random() * height;
+        const r = Math.random() * 0.8 + 0.2;
+        const opacity = Math.random() * 0.7 + 0.3;
+        starsContent += `<circle cx="${x}" cy="${y}" r="${r}" fill="#f0f8ff" opacity="${opacity}" />`;
+      }
+      // 3. 주요 별 (Prominent Stars)
+      for (let i = 0; i < 10; i++) {
+        const x = Math.random() * width;
+        const y = Math.random() * height;
+        const r = Math.random() * 1.5 + 0.8;
+        const colorRoll = Math.random();
+        let color = '#ffffff';
+        if (colorRoll > 0.9) color = '#ffccaa'; // 노란색
+        else if (colorRoll > 0.8) color = '#aaccff'; // 푸른색
+        starsContent += `<circle cx="${x}" cy="${y}" r="${r}" fill="${color}" filter="url(#brightStarGlow)" />`;
+      }
+      // 4. 유성 (Shooting Stars)
+      for (let i = 0; i < (Math.random() > 0.5 ? 1 : 2); i++) {
+        const x1 = Math.random() * width;
+        const y1 = Math.random() * height;
+        const length = Math.random() * 300 + 100;
+        const angle = Math.random() * 360;
+        const x2 = x1 + length * Math.cos(angle * Math.PI / 180);
+        const y2 = y1 + length * Math.sin(angle * Math.PI / 180);
+        starsContent += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#ffffff" stroke-width="1" stroke-opacity="0.4" />`;
+      }
+
       return starsContent;
 
     case 'matrix':
-      const matrixChars = 'qwertyuiopasdfghjklzxcvbnmABCDEFGHIJKLMNOPQRSTUVWXYZΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ=/<>+*&%$#@!';
-      const binaryChars = '01';
+      const english = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      const numbers = '0123456789';
+      const japanese = 'アイウエオカキクケコサシスセソタチツテトナニヌネノ';
+      const hangul = '가나다라마바사아자차카타파하';
+      const symbols = '-=/<>+*&%$#@!';
+      const matrixChars = english.repeat(5) + numbers.repeat(2) + hangul + japanese + symbols;
       const matrixFontSize = 18;
       const columnWidth = matrixFontSize * 0.9;
       const columns = Math.floor(width / columnWidth);
@@ -81,21 +112,18 @@ function generateBackgroundSVG(bgType, width, height) {
 
       for (let i = 0; i < columns; i++) {
         if (Math.random() < 0.1) continue;
-        const isBinaryStream = Math.random() < 0.15;
-        const charSet = isBinaryStream ? binaryChars : matrixChars;
         const xJitter = (Math.random() - 0.5) * columnWidth;
         const x = i * columnWidth + xJitter;
         const startY = Math.random() * height * 1.5 - height * 0.5;
         const streamLength = Math.floor(Math.random() * (height / matrixFontSize * 0.8)) + 10;
-        
         for (let j = 0; j < streamLength; j++) {
-          const charIndex = Math.floor(Math.random() * charSet.length);
-          const char = charSet[charIndex];
+          const charIndex = Math.floor(Math.random() * matrixChars.length);
+          const char = matrixChars[charIndex];
           const y = startY + j * matrixFontSize;
           if (y < 0 || y > height) continue;
           const isLeading = j === streamLength - 1;
-          const color = isLeading ? '#ffffff' : '#00ff41';
-          const opacity = isBinaryStream ? 0.3 + (j / streamLength) * 0.7 : 0.1 + (j / streamLength) * 0.9;
+          const color = isLeading ? '#c0ffc0' : '#00e030';
+          const opacity = 0.1 + (j / streamLength) * 0.9;
           const filter = isLeading ? 'url(#leadingGlow)' : 'url(#matrixGlow)';
           matrixContent += `<text x="${x}" y="${y}" font-family="monospace" font-size="${matrixFontSize}px" fill="${color}" opacity="${opacity}" filter="${filter}">${escapeSVG(char)}</text>`;
         }
@@ -132,7 +160,7 @@ const constants = {
 exports.handler = async function(event) {
   try {
     const defaultParams = {
-      text: '실감 나게 개선된 {은하수} 배경입니다.|성간 먼지와 별의 밀도를 조절했습니다.',
+      text: '더욱 사실적으로 개선된 {은하수} 배경입니다.|유성우가 떨어질 수도 있습니다.',
       textColor: '#ffffff',
       fontSize: 16,
       align: 'left',
@@ -169,7 +197,7 @@ exports.handler = async function(event) {
     const mainTextStyle = `paint-order="stroke" stroke="#000000" stroke-width="2px" stroke-linejoin="round"`;
 
     const svg = `
-      <svg width="${constants.width}" height="${height}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${escapeSVG(rawText)}">
+      <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${escapeSVG(rawText)}">
         <style>
           text { white-space: pre; }
         </style>
@@ -181,20 +209,3 @@ exports.handler = async function(event) {
           fill="${textColor}"
           text-anchor="${textAnchor}"
           ${mainTextStyle}
-        >
-          ${textElements}
-        </text>
-      </svg>
-    `;
-
-    return {
-      statusCode: 200,
-      headers: { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=3600, s-maxage=3600' },
-      body: svg.trim(),
-    };
-  } catch (err) {
-    console.error("SVG Generation Error:", err);
-    const errorSvg = `<svg width="400" height="200" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="#f8d7da" /><text x="10" y="50%" font-family="monospace" font-size="16" fill="#721c24" dominant-baseline="middle">Error: ${escapeSVG(err.message)}</text></svg>`;
-    return { statusCode: 500, headers: { 'Content-Type': 'image/svg+xml' }, body: errorSvg.trim() };
-  }
-};
