@@ -45,56 +45,44 @@ function generateBackgroundSVG(bgType, width, height) {
         </defs>
       `;
       starsContent += defs;
-      
-      // [1단계] 배경 그라데이션
       starsContent += `<rect width="${width}" height="${height}" fill="url(#bgGradient)" />`;
-      
-      // [2단계] 중심 은하수 빛
       starsContent += `<ellipse cx="${width / 2}" cy="${height / 2}" rx="${width * 0.7}" ry="${height * 0.2}" fill="url(#nebulaGradient)" transform="rotate(-45 ${width / 2} ${height / 2})" />`;
 
-      // [3단계] 별 뿌리기
       const starCount = 400;
       const nebulaCenterX = width / 2;
       const nebulaCenterY = height / 2;
-      const rotationAngle = -45 * Math.PI / 180; // 은하수 회전 각도 (라디안)
+      const rotationAngle = -45 * Math.PI / 180;
 
       for (let i = 0; i < starCount; i++) {
         const x = Math.random() * width;
         const y = Math.random() * height;
-        
-        // 별의 좌표를 은하수 각도에 맞춰 회전시켜 거리를 계산
         const rotatedX = Math.cos(-rotationAngle) * (x - nebulaCenterX) - Math.sin(-rotationAngle) * (y - nebulaCenterY) + nebulaCenterX;
         const rotatedY = Math.sin(-rotationAngle) * (x - nebulaCenterX) + Math.cos(-rotationAngle) * (y - nebulaCenterY) + nebulaCenterY;
         const dist = Math.abs(rotatedY - nebulaCenterY);
-        
-        // 은하수 띠 중심에 가까울수록 별이 나타날 확률 증가
         const spawnProb = Math.pow(Math.max(0, 1 - dist / (height * 0.3)), 2);
 
-        if (Math.random() < spawnProb) { // 밀집된 별
+        if (Math.random() < spawnProb) {
           const r = Math.random() * 1.5 + 0.2;
           const opacity = Math.random() * 0.5 + 0.5;
           starsContent += `<circle cx="${x}" cy="${y}" r="${r}" fill="#fff" opacity="${opacity}" />`;
-        } else if (Math.random() < 0.2) { // 흩어진 별
+        } else if (Math.random() < 0.2) {
           const r = Math.random() * 0.8 + 0.1;
           const opacity = Math.random() * 0.6 + 0.2;
           starsContent += `<circle cx="${x}" cy="${y}" r="${r}" fill="#fff" opacity="${opacity}" />`;
         }
       }
-      // 빛나는 별
       for(let i=0; i<10; i++) {
         const x = Math.random() * width;
         const y = Math.random() * height;
         const r = Math.random() * 1.5 + 1;
         starsContent += `<circle cx="${x}" cy="${y}" r="${r}" fill="#aaddff" filter="url(#starGlow)" />`;
       }
-      
-      // [4단계] 유성우 추가
       const meteorCount = Math.floor(Math.random() * 3) + 2;
       for(let i=0; i < meteorCount; i++) {
           const startX = Math.random() * width;
           const startY = Math.random() * height;
           const length = Math.random() * 150 + 50;
-          const angle = (Math.random() - 0.5) * 80 - 45; // 은하수와 비슷한 각도로 떨어지도록
+          const angle = (Math.random() - 0.5) * 80 - 45;
           const transform = `rotate(${angle} ${startX} ${startY})`;
           starsContent += `<line x1="${startX}" y1="${startY}" x2="${startX + length}" y2="${startY}" stroke="url(#meteorGradient)" stroke-width="2" transform="${transform}" />`
       }
@@ -122,16 +110,27 @@ function generateBackgroundSVG(bgType, width, height) {
         const x = i * columnWidth + xJitter;
         const startY = Math.random() * height * 1.5 - height * 0.5;
         const streamLength = Math.floor(Math.random() * (height / matrixFontSize * 0.8)) + 10;
+        
+        // [개선] 열(Column)마다 <text> 요소 하나만 생성
+        let streamTspans = '';
         for (let j = 0; j < streamLength; j++) {
           const charIndex = Math.floor(Math.random() * matrixChars.length);
           const char = matrixChars[charIndex];
           const y = startY + j * matrixFontSize;
           if (y < 0 || y > height) continue;
+
           const isLeading = j === streamLength - 1;
           const color = isLeading ? '#c0ffc0' : '#00e030';
           const opacity = 0.1 + (j / streamLength) * 0.9;
-          const filter = isLeading ? 'url(#leadingGlow)' : 'url(#matrixGlow)';
-          matrixContent += `<text x="${x}" y="${y}" font-family="monospace" font-size="${matrixFontSize}px" fill="${color}" opacity="${opacity}" filter="${filter}">${escapeSVG(char)}</text>`;
+          
+          // [개선] 첫 문자는 절대 좌표(y), 나머지는 상대 좌표(dy)로 위치 지정
+          const posAttr = j === 0 ? `y="${startY}"` : `dy="1.2em"`;
+          streamTspans += `<tspan x="${x}" ${posAttr} fill="${color}" opacity="${opacity}">${escapeSVG(char)}</tspan>`;
+        }
+        
+        if (streamTspans) {
+          // [개선] 공통 속성은 부모 <text>에 한 번만 적용
+          matrixContent += `<text font-family="monospace" font-size="${matrixFontSize}px" filter="url(#matrixGlow)">${streamTspans}</text>`;
         }
       }
       return matrixContent;
@@ -166,11 +165,11 @@ const constants = {
 exports.handler = async function(event) {
   try {
     const defaultParams = {
-      text: '몽환적인 스타일의 {은하수} 배경입니다.|유성우가 떨어집니다.',
+      text: '대역폭이 최적화된 {Matrix} 배경입니다.',
       textColor: '#ffffff',
       fontSize: 16,
-      align: 'left',
-      bg: 'stars',
+      align: 'center',
+      bg: 'matrix',
     };
     const queryParams = event.queryStringParameters || {};
     const params = { ...defaultParams, ...queryParams };
