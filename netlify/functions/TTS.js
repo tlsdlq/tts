@@ -29,15 +29,12 @@ function generateBackgroundSVG(bgType, width, height) {
     case 'kuro':
       const kuroDefs = `
         <defs>
-          <filter id="kuroOuterGlow">
-            <feGaussianBlur in="SourceGraphic" stdDeviation="8" />
-          </filter>
-          <filter id="kuroInnerGlow">
-            <feGaussianBlur in="SourceGraphic" stdDeviation="3" />
-          </filter>
           <filter id="kuroDistort">
-            <feTurbulence type="fractalNoise" baseFrequency="0.03 0.1" numOctaves="2" seed="${seed}" result="turbulence" />
-            <feDisplacementMap in="SourceGraphic" in2="turbulence" scale="5" xChannelSelector="R" yChannelSelector="G" />
+            <feTurbulence baseFrequency="0.05 0.5" numOctaves="4" type="fractalNoise" seed="${seed}" result="T" />
+            <feDisplacementMap in="SourceGraphic" in2="T" scale="2.5" />
+          </filter>
+           <filter id="kuroGlow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur" />
           </filter>
         </defs>
       `;
@@ -46,58 +43,53 @@ function generateBackgroundSVG(bgType, width, height) {
       kuroContent += `<rect width="${width}" height="${height}" fill="#000000" />`;
 
       const paths = [];
-      const gridCellSize = 40;
-      const cols = Math.floor(width / gridCellSize);
-      const rows = Math.floor(height / gridCellSize);
-      const grid = Array(rows).fill(null).map(() => Array(cols).fill(false));
-      
-      const maxBranches = 40;
-      let branchCount = 0;
+      const branchProb = 0.8; // 가지를 뻗을 확률
+      const maxDepth = 15; // 최대 성장 깊이
 
-      function generateMaze(x, y) {
-        if (branchCount >= maxBranches) return;
-        
-        const directions = ['N', 'S', 'E', 'W'].sort(() => Math.random() - 0.5);
+      function createBranch(x, y, dir, depth) {
+          if (depth > maxDepth || Math.random() > branchProb) return;
 
-        for (const dir of directions) {
-          const nx = x + (dir === 'E' ? 1 : dir === 'W' ? -1 : 0);
-          const ny = y + (dir === 'S' ? 1 : dir === 'N' ? -1 : 0);
+          const length = (Math.random() * 0.4 + 0.6) * 60;
+          let nx = x;
+          let ny = y;
 
-          if (nx >= 0 && nx < cols && ny >= 0 && ny < rows && !grid[ny][nx]) {
-            grid[y][x] = true;
-            grid[ny][nx] = true;
-            
-            const startX = x * gridCellSize + gridCellSize / 2;
-            const startY = y * gridCellSize + gridCellSize / 2;
-            const endX = nx * gridCellSize + gridCellSize / 2;
-            const endY = ny * gridCellSize + gridCellSize / 2;
-            paths.push(`M${startX},${startY} L${endX},${endY}`);
-            
-            branchCount++;
-            generateMaze(nx, ny);
-          }
-        }
+          if (dir === 0) ny -= length; // Up
+          else if (dir === 1) nx += length; // Right
+          else if (dir === 2) ny += length; // Down
+          else if (dir === 3) nx -= length; // Left
+
+          if (nx < 0 || nx > width || ny < 0 || ny > height) return;
+          
+          paths.push(`M${x} ${y} L${nx} ${ny}`);
+
+          createBranch(nx, ny, (dir + 1) % 4, depth + 1);
+          createBranch(nx, ny, (dir + 3) % 4, depth + 1);
       }
       
-      // 여러 시작점에서 미로 생성
-      for(let i=0; i<5; i++){
-          const startCol = Math.floor(Math.random() * cols);
-          const startRow = Math.floor(Math.random() * rows);
-          if(!grid[startRow][startCol]){
-             generateMaze(startCol, startRow);
-          }
+      const numStarters = 25;
+      for (let i = 0; i < numStarters; i++) {
+        const startX = Math.random() * width;
+        const startY = Math.random() * height;
+        const startDir = Math.floor(Math.random() * 4);
+        createBranch(startX, startY, startDir, 0);
       }
-
+      
       const pathData = paths.join(' ');
       
-      // 3단계 렌더링으로 깊이감 부여
-      kuroContent += `<path d="${pathData}" stroke="#6a0dad" stroke-width="14" stroke-linecap="round" fill="none" opacity="0.5" filter="url(#kuroOuterGlow)" />`;
-      kuroContent += `<path d="${pathData}" stroke="#9370db" stroke-width="7" stroke-linecap="round" fill="none" opacity="0.8" filter="url(#kuroInnerGlow)" />`;
-      kuroContent += `<path d="${pathData}" stroke="#e0b0ff" stroke-width="2.5" stroke-linecap="round" fill="none" filter="url(#kuroDistort)" />`;
+      // 3중 레이어로 깊이감과 질감 표현
+      kuroContent += `<g opacity="0.8">`;
+      // 1. 외부 글로우 (넓고 부드러운 보라색)
+      kuroContent += `<path d="${pathData}" stroke="#7029cb" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" fill="none" filter="url(#kuroGlow)" />`;
+      // 2. 중심 몸체 (선명한 보라색)
+      kuroContent += `<path d="${pathData}" stroke="#a460f9" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none" />`;
+      // 3. 내부 코어 (밝고 자글거리는 에너지)
+      kuroContent += `<path d="${pathData}" stroke="#f0e6ff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" filter="url(#kuroDistort)" />`;
+      kuroContent += `</g>`;
 
       return kuroContent;
 
     case 'stars':
+      // ... (이전과 동일)
       const galaxyDefs = `
         <defs>
           <filter id="starGlow">
@@ -178,56 +170,4 @@ exports.handler = async function(event) {
     }
 
     const rawText = params.text;
-    const lines = rawText.split('|');
-    const totalTextBlockHeight = (lines.length - 1) * (constants.lineHeight * fontSize) + fontSize;
-    const height = Math.round(totalTextBlockHeight + (constants.paddingY * 2));
-    const backgroundContent = generateBackgroundSVG(params.bg, constants.width, height);
-    const startY = Math.round((height / 2) - (totalTextBlockHeight / 2) + (fontSize * 0.8));
-
-    // --- [수정된 부분] 안정적인 텍스트 정렬 로직 ---
-    const textElements = lines.map((line, index) => {
-      const innerContent = parseBoldText(line);
-      // 첫 줄은 y 좌표를 명시하고, 이후 줄은 dy로 상대적 간격을 설정
-      // 모든 줄에 x좌표를 명시하여 정렬 기준점을 확실히 함
-      const yPos = index === 0 ? `y="${startY}"` : '';
-      const dyPos = index > 0 ? `dy="${constants.lineHeight}em"` : '';
-      return `<tspan x="${x}" ${yPos} ${dyPos}>${innerContent}</tspan>`;
-    }).join('');
-
-    const mainTextStyle = `paint-order="stroke" stroke="#000000" stroke-width="2px" stroke-linejoin="round"`;
-
-    // 부모 <text> 태그는 정렬 기준(text-anchor)만 담당
-    const svg = `
-      <svg width="${constants.width}" height="${height}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${escapeSVG(rawText)}">
-        <style>
-          text { white-space: pre; }
-        </style>
-        ${backgroundContent}
-        <text
-          font-family="sans-serif"
-          font-size="${fontSize}px"
-          fill="${textColor}"
-          text-anchor="${textAnchor}"
-          ${mainTextStyle}
-        >
-          ${textElements}
-        </text>
-      </svg>
-    `;
-    // --- [수정 끝] ---
-
-    return {
-      statusCode: 200,
-      headers: { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=3600, s-maxage=3600' },
-      body: svg.trim(),
-    };
-  } catch (err) {
-    console.error("SVG Generation Error:", err);
-    const errorSvg = `<svg width="400" height="200" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="#f8d7da" /><text x="10" y="50%" font-family="monospace" font-size="16" fill="#721c24" dominant-baseline="middle">Error: ${escapeSVG(err.message)}</text></svg>`;
-    return { 
-      statusCode: 500,
-      headers: { 'Content-Type': 'image/svg+xml' },
-      body: errorSvg.trim()
-    };
-  }
-};
+    con
