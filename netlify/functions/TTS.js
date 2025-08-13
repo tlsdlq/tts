@@ -104,6 +104,7 @@ function generateBackgroundSVG(bgType, width, height) {
 
       return starsContent;
     
+    // --- [수정된 부분 시작] ---
     case 'matrix':
       const english = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
       const numbers = '0123456789';
@@ -116,7 +117,8 @@ function generateBackgroundSVG(bgType, width, height) {
       const columns = Math.floor(width / columnWidth);
       let matrixContent = '';
 
-      const matrixDefs = `<defs><filter id="matrixGlow"><feGaussianBlur in="SourceGraphic" stdDeviation="1.0" result="blur" /></filter><filter id="leadingGlow"><feGaussianBlur in="SourceGraphic" stdDeviation="2.0" result="blur" /></filter></defs>`;
+      // 'leadingGlow' 필터 정의를 제거하고 'matrixGlow'만 남김
+      const matrixDefs = `<defs><filter id="matrixGlow"><feGaussianBlur in="SourceGraphic" stdDeviation="1.0" result="blur" /></filter></defs>`;
       matrixContent += matrixDefs;
       matrixContent += `<rect width="${width}" height="${height}" fill="#000000" />`;
 
@@ -128,7 +130,6 @@ function generateBackgroundSVG(bgType, width, height) {
         const streamLength = Math.floor(Math.random() * (height / matrixFontSize * 0.8)) + 10;
         
         const streamTspans = [];
-        let leadingCharTspan = '';
 
         for (let j = 0; j < streamLength; j++) {
           const charIndex = Math.floor(Math.random() * matrixChars.length);
@@ -136,29 +137,25 @@ function generateBackgroundSVG(bgType, width, height) {
           const y = startY + j * matrixFontSize;
           if (y < 0 || y > height) continue;
           
-          const isLeading = j === streamLength - 1;
-          const color = isLeading ? '#c0ffc0' : '#00e030';
+          // 선두 글자 구분 로직 제거, 모든 글자 색상 통일
+          const color = '#00e030'; 
           const opacity = 0.1 + (j / streamLength) * 0.9;
           const posAttr = j === 0 ? `y="${startY}"` : `dy="1.2em"`;
 
           const tspan = `<tspan x="${x}" ${posAttr} fill="${color}" opacity="${opacity}">${escapeSVG(char)}</tspan>`;
           
-          if (isLeading) {
-            leadingCharTspan = tspan;
-          } else {
-            streamTspans.push(tspan);
-          }
+          // 모든 tspan을 하나의 배열에 추가
+          streamTspans.push(tspan);
         }
         
+        // 하나의 <text> 요소로 모든 글자를 렌더링
         if (streamTspans.length > 0) {
           matrixContent += `<text font-family="monospace" font-size="${matrixFontSize}px" filter="url(#matrixGlow)">${streamTspans.join('')}</text>`;
         }
-        if (leadingCharTspan) {
-          matrixContent += `<text font-family="monospace" font-size="${matrixFontSize}px" filter="url(#leadingGlow)">${leadingCharTspan}</text>`;
-        }
       }
       return matrixContent;
-      
+    // --- [수정된 부분 끝] ---
+
     case 'default':
     default:
       // 단순 검은색 배경
@@ -177,15 +174,13 @@ const constants = {
 // --- 주 함수 핸들러 ---
 exports.handler = async function(event) {
   try {
-    // --- [수정된 부분] ---
     const defaultParams = {
       text: 'Dynamic {SVG} on Netlify|Special Chars: < & >',
       textColor: '#ffffff',
       fontSize: 16,
       align: 'left',
-      bg: 'default', // 'stars'에서 'default'로 변경
+      bg: 'default',
     };
-    // --- [수정 끝] ---
     const queryParams = event.queryStringParameters || {};
     const params = { ...defaultParams, ...queryParams };
     
