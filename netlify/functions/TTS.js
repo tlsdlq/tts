@@ -25,82 +25,74 @@ function generateBackgroundSVG(bgType, width, height) {
       let starsContent = '';
       const defs = `
         <defs>
-          <radialGradient id="cloud1" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stop-color="#D2B48C" stop-opacity="0.25" />
-            <stop offset="100%" stop-color="#D2B48C" stop-opacity="0" />
+          <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#2c2158" />
+            <stop offset="100%" stop-color="#000000" />
+          </linearGradient>
+          <radialGradient id="nebulaGradient" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#70a0ff" stop-opacity="0.6" />
+            <stop offset="80%" stop-color="#3b76a8" stop-opacity="0.1" />
+            <stop offset="100%" stop-color="#3b76a8" stop-opacity="0" />
           </radialGradient>
-          <radialGradient id="cloud2" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stop-color="#F0E68C" stop-opacity="0.15" />
-            <stop offset="100%" stop-color="#F0E68C" stop-opacity="0" />
-          </radialGradient>
-           <radialGradient id="dustLane" cx="50%" cy="50%" r="50%">
-            <stop offset="20%" stop-color="#000000" stop-opacity="0.4" />
-            <stop offset="100%" stop-color="#000000" stop-opacity="0" />
-          </radialGradient>
-          <filter id="brightStarGlow">
-            <feGaussianBlur stdDeviation="2.0" />
+          <linearGradient id="meteorGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="rgba(255,255,255,0)" />
+            <stop offset="70%" stop-color="rgba(170,220,255,0.8)" />
+            <stop offset="100%" stop-color="rgba(255,255,255,1)" />
+          </linearGradient>
+          <filter id="starGlow">
+            <feGaussianBlur stdDeviation="1.5" />
           </filter>
         </defs>
       `;
       starsContent += defs;
-      starsContent += `<rect width="${width}" height="${height}" fill="#010203" />`;
+      starsContent += `<rect width="${width}" height="${height}" fill="url(#bgGradient)" />`;
+      starsContent += `<ellipse cx="${width / 2}" cy="${height / 2}" rx="${width * 0.7}" ry="${height * 0.2}" fill="url(#nebulaGradient)" transform="rotate(-45 ${width / 2} ${height / 2})" />`;
 
-      // [개선] 유기적인 성운 집합 그리기
-      for (let i = 0; i < 25; i++) {
-        const cx = width * 0.2 + Math.random() * width * 0.6;
-        const cy = height * 0.3 + Math.random() * height * 0.4;
-        const rx = width * 0.1 + Math.random() * width * 0.25;
-        const ry = height * 0.05 + Math.random() * height * 0.1;
-        const opacity = Math.random() * 0.5 + 0.3;
-        const rotation = Math.random() * 180;
-        const fill = Math.random() > 0.4 ? 'url(#cloud1)' : 'url(#cloud2)';
-        starsContent += `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="${fill}" opacity="${opacity}" transform="rotate(${rotation} ${cx} ${cy})" />`;
-      }
-      // [개선] 암흑 성운(먼지) 겹치기
-       starsContent += `<ellipse cx="${width/2}" cy="${height/2}" rx="${width*0.4}" ry="${height*0.2}" fill="url(#dustLane)" opacity="0.8" transform="rotate(70 ${width/2} ${height/2})" />`;
-      
-      // [개선] 별 다층 구조 생성
-      for (let i = 0; i < 1500; i++) {
-        const x = Math.random() * width;
-        const y = height * 0.15 + Math.random() * height * 0.7;
-        const r = Math.random() * 0.35;
-        const opacity = Math.random() * 0.6 + 0.1;
-        starsContent += `<circle cx="${x}" cy="${y}" r="${r}" fill="#fff" opacity="${opacity}" />`;
-      }
-      for (let i = 0; i < 250; i++) {
+      const starCount = 400;
+      const nebulaCenterX = width / 2;
+      const nebulaCenterY = height / 2;
+      const rotationAngle = -45 * Math.PI / 180;
+
+      for (let i = 0; i < starCount; i++) {
         const x = Math.random() * width;
         const y = Math.random() * height;
-        const r = Math.random() * 0.7 + 0.2;
-        const opacity = Math.random() * 0.7 + 0.3;
-        starsContent += `<circle cx="${x}" cy="${y}" r="${r}" fill="#f0f8ff" opacity="${opacity}" />`;
+        const rotatedX = Math.cos(-rotationAngle) * (x - nebulaCenterX) - Math.sin(-rotationAngle) * (y - nebulaCenterY) + nebulaCenterX;
+        const rotatedY = Math.sin(-rotationAngle) * (x - nebulaCenterX) + Math.cos(-rotationAngle) * (y - nebulaCenterY) + nebulaCenterY;
+        const dist = Math.abs(rotatedY - nebulaCenterY);
+        const spawnProb = Math.pow(Math.max(0, 1 - dist / (height * 0.3)), 2);
+
+        if (Math.random() < spawnProb) {
+          const r = Math.random() * 1.5 + 0.2;
+          const opacity = Math.random() * 0.5 + 0.5;
+          starsContent += `<circle cx="${x}" cy="${y}" r="${r}" fill="#fff" opacity="${opacity}" />`;
+        } else if (Math.random() < 0.2) {
+          const r = Math.random() * 0.8 + 0.1;
+          const opacity = Math.random() * 0.6 + 0.2;
+          starsContent += `<circle cx="${x}" cy="${y}" r="${r}" fill="#fff" opacity="${opacity}" />`;
+        }
       }
-      for (let i = 0; i < 15; i++) {
+      for(let i=0; i<10; i++) {
         const x = Math.random() * width;
         const y = Math.random() * height;
-        const r = Math.random() * 1.2 + 0.8;
-        const colorRoll = Math.random();
-        let color = '#ffffff';
-        if (colorRoll > 0.85) color = '#ffdac7';
-        else if (colorRoll > 0.7) color = '#c7fdff';
-        starsContent += `<circle cx="${x}" cy="${y}" r="${r}" fill="${color}" filter="url(#brightStarGlow)" />`;
+        const r = Math.random() * 1.5 + 1;
+        starsContent += `<circle cx="${x}" cy="${y}" r="${r}" fill="#aaddff" filter="url(#starGlow)" />`;
       }
-      for (let i = 0; i < (Math.random() > 0.4 ? 1 : 2); i++) {
-        const x1 = Math.random() * width;
-        const y1 = Math.random() * height;
-        const length = Math.random() * 250 + 150;
-        const angle = Math.random() * 360;
-        const x2 = x1 + length * Math.cos(angle * Math.PI / 180);
-        const y2 = y1 + length * Math.sin(angle * Math.PI / 180);
-        starsContent += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#ffffff" stroke-width="0.8" stroke-opacity="0.3" />`;
+      const meteorCount = Math.floor(Math.random() * 3) + 2;
+      for(let i=0; i < meteorCount; i++) {
+          const startX = Math.random() * width;
+          const startY = Math.random() * height;
+          const length = Math.random() * 150 + 50;
+          const angle = (Math.random() - 0.5) * 80 - 45;
+          const transform = `rotate(${angle} ${startX} ${startY})`;
+          starsContent += `<line x1="${startX}" y1="${startY}" x2="${startX + length}" y2="${startY}" stroke="url(#meteorGradient)" stroke-width="2" transform="${transform}" />`
       }
-
       return starsContent;
 
     case 'matrix':
       const english = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
       const numbers = '0123456789';
       const japanese = 'アイウエオカキクケコサシスセソタチツテトナニヌネノ';
-      const hangul = 'ㅂㅈㄷㄱㅅㅛㅕㅑㅐㅔㅁㄴㅇㄹㅎㅗㅓㅏㅣㅋㅌㅊㅍㅠㅜㅡ';
+      const hangul = 'ㅂㅈㄷㄱㅅㅁㄴㅇㄹㅎㅋㅌㅊㅍㅛㅕㅑㅐㅔㅗㅓㅏㅣㅠㅜㅡ';
       const symbols = '-=/<>+*&%$#@!';
       const matrixChars = english.repeat(5) + numbers.repeat(2) + hangul + japanese + symbols;
       const matrixFontSize = 18;
@@ -108,7 +100,6 @@ function generateBackgroundSVG(bgType, width, height) {
       const columns = Math.floor(width / columnWidth);
       let matrixContent = '';
 
-      // [개선] 블러 효과 강화
       const matrixDefs = `<defs><filter id="matrixGlow"><feGaussianBlur in="SourceGraphic" stdDeviation="1.0" result="blur" /></filter><filter id="leadingGlow"><feGaussianBlur in="SourceGraphic" stdDeviation="2.0" result="blur" /></filter></defs>`;
       matrixContent += matrixDefs;
       matrixContent += `<rect width="${width}" height="${height}" fill="#000000" />`;
@@ -163,7 +154,7 @@ const constants = {
 exports.handler = async function(event) {
   try {
     const defaultParams = {
-      text: '더욱 사실적으로 개선된 {은하수}와 {블러} 효과가 적용된 매트릭스.',
+      text: '스타일이 적용된 {은하수} 배경입니다.|유성우가 떨어집니다.',
       textColor: '#ffffff',
       fontSize: 16,
       align: 'left',
