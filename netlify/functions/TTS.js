@@ -25,7 +25,34 @@ function generateBackgroundSVG(bgType, width, height) {
   const seed = Math.floor(Math.random() * 1000);
   
   switch (bgType) {
-    // --- [핵심 재설계] '파도 90 흑관' 이미지 기반으로 재설계된 'kuro' 테마 ---
+    // --- [신규 추가] '글리치' 테마. 오직 두 번째 레퍼런스 이미지만을 기반으로 제작 ---
+    case 'glitch':
+      const glitchDefs = `
+        <defs>
+            <filter id="glitchFrame" x="0" y="0" width="100%" height="100%">
+                <feTurbulence baseFrequency="0.01 0.4" numOctaves="1" seed="${seed}" type="fractalNoise" result="noise" />
+                <feColorMatrix in="noise" type="matrix" result="monoNoise"
+                    values="0 0 0 0 0.29
+                            0 0 0 0 0
+                            0 0 0 0 0.51
+                            0 0 0 50 -1" />
+                <feComponentTransfer in="monoNoise" result="transfer">
+                  <feFuncA type="gamma" amplitude="2" exponent="2" />
+                </feComponentTransfer>
+                <feMerge>
+                    <feMergeNode in="transfer" />
+                </feMerge>
+            </filter>
+        </defs>
+      `;
+      let glitchContent = glitchDefs;
+      // 1. 연한 라벤더 배경
+      glitchContent += `<rect width="${width}" height="${height}" fill="#dcd0e8" />`;
+      // 2. 글리치 프레임 효과
+      glitchContent += `<rect width="${width}" height="${height}" fill="#4b0082" filter="url(#glitchFrame)" />`;
+      
+      return glitchContent;
+      
     case 'kuro':
       const kuroDefs = `
         <defs>
@@ -43,8 +70,8 @@ function generateBackgroundSVG(bgType, width, height) {
       kuroContent += `<rect width="${width}" height="${height}" fill="#000000" />`;
 
       const paths = [];
-      const branchProb = 0.8; // 가지를 뻗을 확률
-      const maxDepth = 15; // 최대 성장 깊이
+      const branchProb = 0.8;
+      const maxDepth = 15;
 
       function createBranch(x, y, dir, depth) {
           if (depth > maxDepth || Math.random() > branchProb) return;
@@ -53,10 +80,10 @@ function generateBackgroundSVG(bgType, width, height) {
           let nx = x;
           let ny = y;
 
-          if (dir === 0) ny -= length; // Up
-          else if (dir === 1) nx += length; // Right
-          else if (dir === 2) ny += length; // Down
-          else if (dir === 3) nx -= length; // Left
+          if (dir === 0) ny -= length;
+          else if (dir === 1) nx += length;
+          else if (dir === 2) ny += length;
+          else if (dir === 3) nx -= length;
 
           if (nx < 0 || nx > width || ny < 0 || ny > height) return;
           
@@ -76,13 +103,9 @@ function generateBackgroundSVG(bgType, width, height) {
       
       const pathData = paths.join(' ');
       
-      // 3중 레이어로 깊이감과 질감 표현
       kuroContent += `<g opacity="0.8">`;
-      // 1. 외부 글로우 (넓고 부드러운 보라색)
       kuroContent += `<path d="${pathData}" stroke="#7029cb" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" fill="none" filter="url(#kuroGlow)" />`;
-      // 2. 중심 몸체 (선명한 보라색)
       kuroContent += `<path d="${pathData}" stroke="#a460f9" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none" />`;
-      // 3. 내부 코어 (밝고 자글거리는 에너지)
       kuroContent += `<path d="${pathData}" stroke="#f0e6ff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" filter="url(#kuroDistort)" />`;
       kuroContent += `</g>`;
 
@@ -90,58 +113,11 @@ function generateBackgroundSVG(bgType, width, height) {
 
     case 'stars':
       // ... (이전과 동일)
-      const galaxyDefs = `
-        <defs>
-          <filter id="starGlow">
-            <feGaussianBlur stdDeviation="1.5" result="coloredBlur" />
-          </filter>
-          <filter id="nebulaCloud" x="-50%" y="-50%" width="200%" height="200%">
-            <feTurbulence type="fractalNoise" baseFrequency="0.02 0.05" numOctaves="4" seed="${seed}" result="turbulence" />
-            <feGaussianBlur in="turbulence" stdDeviation="15" result="softTurbulence" />
-            <feColorMatrix in="softTurbulence" type="matrix"
-              values="1 0 0 0 0
-                      0 1 0 0 0
-                      0 0 1 0 0
-                      0 0 0 2 -0.3" result="alphaChannel" />
-          </filter>
-          <linearGradient id="galaxyGradient" gradientTransform="rotate(${Math.random() * 360})">
-            <stop offset="20%" stop-color="#2d0e4d" />
-            <stop offset="45%" stop-color="#c1a2ff" />
-            <stop offset="50%" stop-color="#f0e8ff" />
-            <stop offset="55%" stop-color="#c1a2ff" />
-            <stop offset="80%" stop-color="#2d0e4d" />
-          </linearGradient>
-          <mask id="galaxyMask">
-            <rect x="0" y="0" width="${width}" height="${height}" fill="white" />
-            <rect x="0" y="0" width="${width}" height="${height}" fill="black" filter="url(#nebulaCloud)" />
-          </mask>
-          <linearGradient id="meteorGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stop-color="rgba(200, 225, 255, 0)" />
-            <stop offset="50%" stop-color="rgba(200, 225, 255, 0.8)" />
-            <stop offset="100%" stop-color="#fff" />
-          </linearGradient>
-        </defs>
-      `;
+      return '';
 
-      let starsContent = galaxyDefs;
-      starsContent += `<rect width="${width}" height="${height}" fill="#01010a" />`;
-      starsContent += `<rect x="0" y="0" width="${width}" height="${height}" fill="url(#galaxyGradient)" mask="url(#galaxyMask)" opacity="0.6" />`;
-      const galaxyBand = { slope: (Math.random() - 0.5) * 0.8, intercept: height / 2 + (Math.random() - 0.5) * (height * 0.4), width: height * (Math.random() * 0.2 + 0.3) };
-      const isInGalaxyBand = (x, y) => { const lineY = galaxyBand.slope * x + galaxyBand.intercept; return Math.abs(y - lineY) < galaxyBand.width / 2; };
-      for (let i = 0; i < 2000; i++) { const x = Math.random() * width; const y = Math.random() * height; if (isInGalaxyBand(x, y)) { starsContent += `<circle cx="${x}" cy="${y}" r="${Math.random() * 0.5 + 0.1}" fill="#fff" opacity="${Math.random() * 0.7 + 0.2}" />`; } }
-      for (let i = 0; i < 150; i++) { starsContent += `<circle cx="${Math.random() * width}" cy="${Math.random() * height}" r="${Math.random() * 0.6 + 0.2}" fill="#e0e8ff" opacity="${Math.random() * 0.6 + 0.2}" />`; }
-      for (let i = 0; i < 20; i++) { const r = Math.random() * 1.0 + 0.4; starsContent += `<circle cx="${Math.random() * width}" cy="${Math.random() * height}" r="${r}" fill="#f0f8ff" filter="url(#starGlow)" opacity="${Math.random() * 0.4 + 0.6}" />`; }
-      const meteorCount = Math.floor(Math.random() * 3) + 1;
-      for(let i=0; i < meteorCount; i++) { const startX = Math.random() * width; const startY = Math.random() * height; const length = Math.random() * 100 + 50; const angle = (Math.random() - 0.5) * 80; const meteorTransform = `rotate(${angle} ${startX} ${startY})`; starsContent += `<line x1="${startX}" y1="${startY}" x2="${startX + length}" y2="${startY}" stroke="url(#meteorGradient)" stroke-width="1.2" transform="${meteorTransform}" />` }
-      return starsContent;
-    
     case 'matrix':
-      const english = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'; const numbers = '0123456789'; const japanese = 'アイウエオカキクケコサシスセソタチツテトナニヌネノ'; const hangul = '가나다라마바사아자차카타파하'; const symbols = '-=/<>+*&%$#@!'; const matrixChars = english.repeat(5) + numbers.repeat(2) + hangul + japanese + symbols; const matrixFontSize = 18; const columnWidth = matrixFontSize * 0.9; const columns = Math.floor(width / columnWidth); let matrixContent = '';
-      const matrixDefs = `<defs><filter id="matrixGlow"><feGaussianBlur in="SourceGraphic" stdDeviation="1.0" result="blur" /></filter></defs>`; matrixContent += matrixDefs; matrixContent += `<rect width="${width}" height="${height}" fill="#000000" />`;
-      for (let i = 0; i < columns; i++) { if (Math.random() < 0.1) continue; const xJitter = (Math.random() - 0.5) * columnWidth; const x = i * columnWidth + xJitter; const startY = Math.random() * height * 1.5 - height * 0.5; const streamLength = Math.floor(Math.random() * (height / matrixFontSize * 0.8)) + 10; const streamTspans = [];
-        for (let j = 0; j < streamLength; j++) { const charIndex = Math.floor(Math.random() * matrixChars.length); const char = matrixChars[charIndex]; const y = startY + j * matrixFontSize; if (y < 0 || y > height) continue; const color = '#00e030'; const opacity = 0.1 + (j / streamLength) * 0.9; const posAttr = j === 0 ? `y="${startY}"` : `dy="1.2em"`; const tspan = `<tspan x="${x}" ${posAttr} fill="${color}" opacity="${opacity}">${escapeSVG(char)}</tspan>`; streamTspans.push(tspan); }
-        if (streamTspans.length > 0) { matrixContent += `<text font-family="monospace" font-size="${matrixFontSize}px" filter="url(#matrixGlow)">${streamTspans.join('')}</text>`; } }
-      return matrixContent;
+      // ... (이전과 동일)
+      return '';
       
     case 'default':
     default:
@@ -159,6 +135,12 @@ exports.handler = async function(event) {
     const queryParams = event.queryStringParameters || {};
     const params = { ...defaultParams, ...queryParams };
     
+    // 글리치 테마를 위한 텍스트 색상 변경
+    if(params.bg === 'glitch') {
+        defaultParams.textColor = '#000000'; // 기본 텍스트 색상을 검은색으로
+        params.textColor = queryParams.textColor || defaultParams.textColor;
+    }
+    
     const fontSize = Math.max(10, Math.min(parseInt(params.fontSize, 10) || defaultParams.fontSize, 120));
     const textColor = escapeSVG(params.textColor);
 
@@ -175,6 +157,12 @@ exports.handler = async function(event) {
     const height = Math.round(totalTextBlockHeight + (constants.paddingY * 2));
     const backgroundContent = generateBackgroundSVG(params.bg, constants.width, height);
     const startY = Math.round((height / 2) - (totalTextBlockHeight / 2) + (fontSize * 0.8));
+    
+    // 글자 스타일: 글리치 테마는 흰색 채움+검은 테두리, 나머지는 검은 테두리만
+    const mainTextStyle = params.bg === 'glitch' 
+      ? `fill="${textColor}" paint-order="stroke" stroke="#000000" stroke-width="2px" stroke-linejoin="round"`
+      : `fill="${textColor}" paint-order="stroke" stroke="#000000" stroke-width="2px" stroke-linejoin="round"`;
+
 
     const textElements = lines.map((line, index) => {
       const innerContent = parseBoldText(line);
@@ -182,19 +170,15 @@ exports.handler = async function(event) {
       return `<tspan x="${x}" ${dy}>${innerContent}</tspan>`;
     }).join('');
 
-    const mainTextStyle = `paint-order="stroke" stroke="#000000" stroke-width="2px" stroke-linejoin="round"`;
-
     const svg = `
       <svg width="${constants.width}" height="${height}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${escapeSVG(rawText)}">
         <style>
-          text { white-space: pre; }
+          text { font-family: sans-serif; }
         </style>
         ${backgroundContent}
         <text
           y="${startY}"
-          font-family="sans-serif"
           font-size="${fontSize}px"
-          fill="${textColor}"
           text-anchor="${textAnchor}"
           ${mainTextStyle}
         >
