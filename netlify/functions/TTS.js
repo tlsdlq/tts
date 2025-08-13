@@ -53,130 +53,53 @@ function generateBackgroundSVG(bgType, width, height) {
       let kuroContent = `<rect width="${width}" height="${height}" fill="#000008" />`;
       kuroContent += kuroDefs;
 
-      // --- 동적 미로 패턴 생성 로직 ---
-      const scale = Math.min(width, height) / 800; // 크기에 따른 스케일링
-      const baseSize = 40 * scale;
-      const margin = baseSize;
-      const step = baseSize * 0.7;
+      // --- 원본 스타일의 정교한 미로 패턴 ---
+      const scale = Math.min(width, height) / 800;
+      const unit = 25 * scale; // 기본 단위
       
-      // 연결점들을 저장할 배열
-      const connectionPoints = [];
-      
-      // 메인 미로 구조 - 연결된 패스로 생성
       let pathData = '';
       
-      // 상단 가로 구조들
-      const topY = margin + step;
-      for (let i = 0; i < 4; i++) {
-        const startX = margin + (width - 2 * margin) * (i / 4);
-        const endX = startX + (width - 2 * margin) / 5;
-        const offsetY = topY + (Math.random() - 0.5) * step * 0.5;
+      // 복잡하고 연결된 미로 구조를 한 번에 그리기
+      const maze = [
+        // 왼쪽 세로 메인 라인
+        `M${unit*2} ${unit*2} L${unit*2} ${height-unit*2}`,
         
-        pathData += ` M${startX} ${offsetY} L${endX} ${offsetY}`;
-        connectionPoints.push({x: startX, y: offsetY}, {x: endX, y: offsetY});
+        // 상단 복잡한 구조
+        `M${unit*2} ${unit*3} L${unit*8} ${unit*3} L${unit*8} ${unit*6} L${unit*14} ${unit*6} L${unit*14} ${unit*2} L${unit*20} ${unit*2}`,
+        `M${unit*20} ${unit*2} L${unit*20} ${unit*8} L${unit*26} ${unit*8} L${unit*26} ${unit*4} L${unit*30} ${unit*4}`,
         
-        // 일부 지점에서 세로 연결
-        if (Math.random() > 0.4) {
-          const vertY = offsetY + step * (1 + Math.random() * 0.8);
-          pathData += ` L${endX} ${vertY}`;
-          connectionPoints.push({x: endX, y: vertY});
-        }
-      }
+        // 중앙 복합 구조
+        `M${unit*8} ${unit*6} L${unit*8} ${unit*12} L${unit*6} ${unit*12} L${unit*6} ${unit*16} L${unit*12} ${unit*16}`,
+        `M${unit*12} ${unit*16} L${unit*12} ${unit*10} L${unit*18} ${unit*10} L${unit*18} ${unit*14} L${unit*24} ${unit*14}`,
+        `M${unit*14} ${unit*6} L${unit*14} ${unit*12} L${unit*20} ${unit*12}`,
+        
+        // 오른쪽 구조
+        `M${unit*20} ${unit*8} L${unit*16} ${unit*8} L${unit*16} ${unit*18} L${unit*22} ${unit*18}`,
+        `M${unit*24} ${unit*14} L${unit*24} ${unit*20} L${unit*18} ${unit*20} L${unit*18} ${unit*22} L${unit*28} ${unit*22}`,
+        `M${unit*26} ${unit*8} L${unit*26} ${unit*16} L${unit*30} ${unit*16}`,
+        
+        // 하단 연결부
+        `M${unit*2} ${unit*18} L${unit*10} ${unit*18} L${unit*10} ${unit*22}`,
+        `M${unit*22} ${unit*18} L${unit*22} ${unit*12}`,
+        
+        // 추가 세부 구조들
+        `M${unit*30} ${unit*4} L${unit*30} ${unit*10} L${unit*28} ${unit*10} L${unit*28} ${unit*12}`,
+        `M${unit*28} ${unit*12} L${unit*28} ${unit*22}`,
+        
+        // 내부 작은 구조들
+        `M${unit*4} ${unit*8} L${unit*4} ${unit*14} L${unit*2} ${unit*14}`,
+        `M${unit*6} ${unit*4} L${unit*6} ${unit*8}`,
+        `M${unit*10} ${unit*10} L${unit*10} ${unit*14}`,
+        `M${unit*20} ${unit*16} L${unit*20} ${unit*20}`,
+        
+        // 연결 세그먼트들
+        `M${unit*12} ${unit*10} L${unit*10} ${unit*10}`,
+        `M${unit*16} ${unit*14} L${unit*16} ${unit*16}`,
+        `M${unit*24} ${unit*12} L${unit*26} ${unit*12}`,
+        `M${unit*22} ${unit*16} L${unit*24} ${unit*16}`,
+      ];
       
-      // 중앙 영역의 복합 구조
-      const centerY = height / 2;
-      const midSections = 5;
-      
-      for (let i = 0; i < midSections; i++) {
-        const baseX = margin + (width - 2 * margin) * (i / midSections);
-        const sectionWidth = (width - 2 * margin) / midSections;
-        const midX = baseX + sectionWidth / 2;
-        const endX = baseX + sectionWidth;
-        
-        // 복잡한 연결 패턴
-        const pattern = Math.floor(Math.random() * 3);
-        
-        switch(pattern) {
-          case 0: // L자 패턴
-            const cornerY = centerY + (Math.random() - 0.5) * step;
-            const extendX = midX + sectionWidth * 0.3;
-            const extendY = cornerY + step * (0.5 + Math.random() * 0.5);
-            pathData += ` M${baseX} ${cornerY} L${extendX} ${cornerY} L${extendX} ${extendY}`;
-            connectionPoints.push({x: baseX, y: cornerY}, {x: extendX, y: cornerY}, {x: extendX, y: extendY});
-            break;
-            
-          case 1: // U자 패턴
-            const uY1 = centerY - step * (0.3 + Math.random() * 0.4);
-            const uY2 = centerY + step * (0.3 + Math.random() * 0.4);
-            pathData += ` M${midX} ${uY1} L${midX} ${uY2} L${endX} ${uY2}`;
-            connectionPoints.push({x: midX, y: uY1}, {x: midX, y: uY2}, {x: endX, y: uY2});
-            break;
-            
-          case 2: // 복잡한 지그재그
-            const zigY1 = centerY - step * 0.5;
-            const zigY2 = centerY + step * 0.5;
-            const zigX = baseX + sectionWidth * 0.6;
-            pathData += ` M${baseX} ${zigY1} L${zigX} ${zigY1} L${zigX} ${zigY2} L${endX} ${zigY2}`;
-            connectionPoints.push({x: baseX, y: zigY1}, {x: zigX, y: zigY1}, {x: zigX, y: zigY2}, {x: endX, y: zigY2});
-            break;
-        }
-      }
-      
-      // 하단 구조
-      const bottomY = height - margin - step;
-      for (let i = 0; i < 3; i++) {
-        const startX = margin + (width - 2 * margin) * (i / 3);
-        const midX = startX + (width - 2 * margin) / 6;
-        const endX = startX + (width - 2 * margin) / 4;
-        const upY = bottomY - step * (0.5 + Math.random() * 0.5);
-        
-        pathData += ` M${startX} ${bottomY} L${midX} ${bottomY} L${midX} ${upY} L${endX} ${upY}`;
-        connectionPoints.push({x: startX, y: bottomY}, {x: midX, y: bottomY}, {x: midX, y: upY}, {x: endX, y: upY});
-      }
-      
-      // 세로 연결선들 추가
-      const verticalSections = 6;
-      for (let i = 1; i < verticalSections; i++) {
-        const x = margin + (width - 2 * margin) * (i / verticalSections);
-        const startY = margin + step + Math.random() * step;
-        const endY = height - margin - step - Math.random() * step;
-        const segments = Math.floor(Math.random() * 3) + 2; // 2-4 세그먼트
-        
-        let currentY = startY;
-        let currentX = x;
-        pathData += ` M${currentX} ${currentY}`;
-        
-        for (let j = 0; j < segments; j++) {
-          const segmentHeight = (endY - startY) / segments;
-          const nextY = currentY + segmentHeight;
-          const jitter = (Math.random() - 0.5) * step * 0.3;
-          
-          if (j === segments - 1) {
-            // 마지막 세그먼트는 직선으로
-            pathData += ` L${currentX} ${endY}`;
-          } else {
-            // 중간에 약간의 굴곡 추가
-            const midY = currentY + segmentHeight / 2;
-            pathData += ` L${currentX + jitter} ${midY} L${currentX} ${nextY}`;
-          }
-          currentY = nextY;
-        }
-        
-        connectionPoints.push({x: currentX, y: startY}, {x: currentX, y: endY});
-      }
-      
-      // 기존 연결점들 사이의 추가 연결선들
-      for (let i = 0; i < connectionPoints.length - 1; i++) {
-        if (Math.random() > 0.8) { // 20% 확률로 연결
-          const point1 = connectionPoints[i];
-          const point2 = connectionPoints[i + 1];
-          const distance = Math.sqrt(Math.pow(point2.x - point1.x, 2) + Math.pow(point2.y - point1.y, 2));
-          
-          if (distance < step * 1.5 && distance > step * 0.4) {
-            pathData += ` M${point1.x} ${point1.y} L${point2.x} ${point2.y}`;
-          }
-        }
-      }
+      pathData = maze.join(' ');
       
       // 메인 미로 패턴 (굵은 선)
       const strokeWidth = Math.max(4, 8 * scale);
