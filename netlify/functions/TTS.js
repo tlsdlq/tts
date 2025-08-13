@@ -14,92 +14,72 @@ function parseBoldText(line) {
   const parts = line.split(/\{([^}]+)\}/g).filter(part => part);
   return parts.map((part, index) => {
     const isBold = index % 2 === 1;
-    // [버그 수정] 각 텍스트 조각을 SVG에 넣기 전에 반드시 이스케이프 처리
     const escapedPart = escapeSVG(part);
     return isBold ? `<tspan font-weight="700">${escapedPart}</tspan>` : `<tspan>${escapedPart}</tspan>`;
   }).join('');
 }
 
-// --- SVG 배경 생성 함수 (이전과 동일, 성능 개선 유지) ---
+// --- SVG 배경 생성 함수 ---
 
 function generateBackgroundSVG(bgType, width, height) {
   switch (bgType) {
     case 'stars':
-      const GALAXY_ROTATION = -35;
-      const GALAXY_BASE_RX_SCALE = 0.8;
-      const GALAXY_BASE_RY_SCALE = 0.4;
-      const GALAXY_CORE_RX_SCALE = 0.6;
-      const GALAXY_CORE_RY_SCALE = 0.15;
-      const STARDUST_BAND_SCALE = 0.3;
-      const STARDUST_COUNT = 1500;
-      const SMALL_STAR_COUNT = 150;
-      const GLOWING_STAR_COUNT = 15;
-      const MIN_METEOR_COUNT = 2;
-      const MAX_METEOR_COUNT = 4;
-
-      let starsContent = '';
-      const defs = `
+      // [핵심 개선] 완전히 새로운 '성운(Nebula)' 테마 배경
+      const starDefs = `
         <defs>
-          <radialGradient id="deepSpace" cx="50%" cy="50%" r="70%">
-            <stop offset="0%" stop-color="#2a0d45" />
-            <stop offset="100%" stop-color="#000" />
-          </radialGradient>
-          <radialGradient id="galaxyBaseGlow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stop-color="#4b0082" stop-opacity="0.5" />
+          <filter id="nebula">
+            <feTurbulence type="fractalNoise" baseFrequency="0.015 0.03" numOctaves="3" seed="${Math.floor(Math.random() * 100)}" />
+            <feColorMatrix type="matrix" values="0 0 0 0 0.7  0 0 0 0 0.85  0 0 0 0 1  0 0 0 1 0" />
+            <feGaussianBlur stdDeviation="3" />
+          </filter>
+          <filter id="starGlow">
+            <feGaussianBlur stdDeviation="1.5" />
+          </filter>
+          <radialGradient id="galaxyCore" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#fff" stop-opacity="1" />
+            <stop offset="40%" stop-color="#aabfff" stop-opacity="0.8" />
             <stop offset="100%" stop-color="#4b0082" stop-opacity="0" />
           </radialGradient>
-          <radialGradient id="galaxyCoreGlow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stop-color="#8ec5ff" stop-opacity="0.6" />
-            <stop offset="100%" stop-color="#8ec5ff" stop-opacity="0" />
-          </radialGradient>
-          <linearGradient id="meteorGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+           <linearGradient id="meteorGradient" x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" stop-color="rgba(200, 225, 255, 0)" />
             <stop offset="50%" stop-color="rgba(200, 225, 255, 0.8)" />
             <stop offset="100%" stop-color="#fff" />
           </linearGradient>
-          <filter id="starGlow">
-            <feGaussianBlur stdDeviation="1.8" />
-          </filter>
         </defs>
       `;
-      starsContent += defs;
-      starsContent += `<rect width="${width}" height="${height}" fill="url(#deepSpace)" />`;
       
-      const rotationStr = `rotate(${GALAXY_ROTATION} ${width / 2} ${height / 2})`;
+      let starsContent = starDefs;
+      starsContent += `<rect width="${width}" height="${height}" fill="#000004" />`;
+      starsContent += `<rect width="${width}" height="${height}" fill="#4a2a6b" filter="url(#nebula)" opacity="0.4" />`;
       
-      starsContent += `<g transform="${rotationStr}">`;
-      starsContent += `<ellipse cx="${width / 2}" cy="${height / 2}" rx="${width * GALAXY_BASE_RX_SCALE}" ry="${height * GALAXY_BASE_RY_SCALE}" fill="url(#galaxyBaseGlow)" />`;
-      starsContent += `<ellipse cx="${width / 2}" cy="${height / 2}" rx="${width * GALAXY_CORE_RX_SCALE}" ry="${height * GALAXY_CORE_RY_SCALE}" fill="url(#galaxyCoreGlow)" />`;
+      const galaxyCenterX = width / 2 + (Math.random() - 0.5) * 100;
+      const galaxyCenterY = height / 2 + (Math.random() - 0.5) * 80;
+      const galaxySize = Math.min(width, height) * (Math.random() * 0.4 + 0.8);
       
-      let stardustPathData = '';
-      const bandWidth = height * STARDUST_BAND_SCALE;
-      for (let i = 0; i < STARDUST_COUNT; i++) {
-        const angle = Math.random() * Math.PI * 2;
-        const radius = Math.random() * width * 0.5;
-        const y_dist = (Math.random() - 0.5) * bandWidth;
-        const x = width / 2 + Math.cos(angle) * radius;
-        const y = height / 2 + Math.sin(angle) * radius + y_dist;
-        stardustPathData += `M${x.toFixed(2)},${y.toFixed(2)}h0`;
-      }
-      starsContent += `<path d="${stardustPathData}" stroke="#fff" stroke-width="0.6" opacity="0.6" fill="none" />`;
-      starsContent += `</g>`;
+      starsContent += `<circle cx="${galaxyCenterX}" cy="${galaxyCenterY}" r="${galaxySize}" fill="url(#galaxyCore)" opacity="0.5" />`;
 
-      for (let i = 0; i < SMALL_STAR_COUNT; i++) {
-        starsContent += `<circle cx="${Math.random() * width}" cy="${Math.random() * height}" r="${Math.random() * 0.8 + 0.1}" fill="#fff" opacity="${Math.random() * 0.5 + 0.2}" />`;
+      // [개선] 더욱 다채로운 별 생성 로직
+      // 1. 아주 작은 배경 별들
+      for (let i = 0; i < 500; i++) {
+        starsContent += `<circle cx="${Math.random() * width}" cy="${Math.random() * height}" r="${Math.random() * 0.4 + 0.1}" fill="#fff" opacity="${Math.random() * 0.3 + 0.1}" />`;
       }
-      for (let i = 0; i < GLOWING_STAR_COUNT; i++) {
-        const r = Math.random() * 1.2 + 0.8;
-        starsContent += `<circle cx="${Math.random() * width}" cy="${height / 2 + (Math.random() - 0.5) * height * 0.8}" r="${r}" fill="#fff" filter="url(#starGlow)" opacity="${Math.random() * 0.5 + 0.5}" />`;
+      // 2. 중간 크기의 밝은 별들
+      for (let i = 0; i < 100; i++) {
+        starsContent += `<circle cx="${Math.random() * width}" cy="${Math.random() * height}" r="${Math.random() * 0.8 + 0.2}" fill="#fff" opacity="${Math.random() * 0.5 + 0.3}" />`;
       }
-      
-      const meteorCount = Math.floor(Math.random() * (MAX_METEOR_COUNT - MIN_METEOR_COUNT + 1)) + MIN_METEOR_COUNT;
+      // 3. 크고 빛나는 별들
+      for (let i = 0; i < 15; i++) {
+        starsContent += `<circle cx="${Math.random() * width}" cy="${Math.random() * height}" r="${Math.random() * 1.2 + 0.5}" fill="#e0e8ff" filter="url(#starGlow)" opacity="${Math.random() * 0.5 + 0.5}" />`;
+      }
+
+      const meteorCount = Math.floor(Math.random() * 3) + 1;
       for(let i=0; i < meteorCount; i++) {
           const startX = Math.random() * width;
           const startY = Math.random() * height;
-          const length = Math.random() * 120 + 40;
-          const angle = (Math.random() - 0.5) * 60 + GALAXY_ROTATION;
+          const length = Math.random() * 100 + 50;
+          const angle = (Math.random() - 0.5) * 80;
           const meteorTransform = `rotate(${angle} ${startX} ${startY})`;
-          starsContent += `<line x1="${startX}" y1="${startY}" x2="${startX + length}" y2="${startY}" stroke="url(#meteorGradient)" stroke-width="1.5" transform="${meteorTransform}" />`
+          starsContent += `<line x1="${startX}" y1="${startY}" x2="${startX + length}" y2="${startY}" stroke="url(#meteorGradient)" stroke-width="1.2" transform="${meteorTransform}" />`
       }
       return starsContent;
 
@@ -158,21 +138,12 @@ function generateBackgroundSVG(bgType, width, height) {
       }
       return matrixContent;
       
+    // --- [수정된 부분] ---
     case 'default':
     default:
-      let defaultContent = '';
-      const defaultDefs = `<defs><linearGradient id="defaultSky" x1="50%" y1="0%" x2="50%" y2="100%"><stop offset="0%" stop-color="#0d1b2a" /><stop offset="100%" stop-color="#1b263b" /></linearGradient></defs>`;
-      defaultContent += defaultDefs;
-      defaultContent += `<rect width="${width}" height="${height}" fill="url(#defaultSky)" />`;
-      const defaultStarCount = 200;
-      for (let i = 0; i < defaultStarCount; i++) {
-        const x = Math.random() * width;
-        const y = Math.random() * height;
-        const r = Math.random() * 0.9 + 0.1;
-        const opacity = Math.random() * 0.7 + 0.2;
-        defaultContent += `<circle cx="${x}" cy="${y}" r="${r}" fill="#f0f8ff" opacity="${opacity}" />`;
-      }
-      return defaultContent;
+      // 단순 검은색 배경으로 변경
+      return `<rect width="${width}" height="${height}" fill="#000000" />`;
+    // --- [수정 끝] ---
   }
 }
 
@@ -188,7 +159,7 @@ const constants = {
 exports.handler = async function(event) {
   try {
     const defaultParams = {
-      text: 'This is a {Dynamic} SVG.|Special Chars: < & >', // 기본값 복원 및 특수문자 예시
+      text: 'Dynamic {SVG} on Netlify|Special Chars: < & >',
       textColor: '#ffffff',
       fontSize: 16,
       align: 'left',
@@ -208,7 +179,6 @@ exports.handler = async function(event) {
     }
 
     const rawText = params.text;
-    // [버그 수정] escapeSVG를 여기서 호출하면 안 됨. 원시 텍스트를 그대로 사용.
     const lines = rawText.split('|');
     
     const totalTextBlockHeight = (lines.length - 1) * (constants.lineHeight * fontSize) + fontSize;
@@ -219,7 +189,6 @@ exports.handler = async function(event) {
     const startY = Math.round((height / 2) - (totalTextBlockHeight / 2) + (fontSize * 0.8));
 
     const textElements = lines.map((line, index) => {
-      // [핵심 수정] parseBoldText가 내부적으로 이스케이프를 처리함
       const innerContent = parseBoldText(line);
       const dy = index === 0 ? '0' : `${constants.lineHeight}em`;
       return `<tspan x="${x}" dy="${dy}">${innerContent}</tspan>`;
@@ -249,12 +218,19 @@ exports.handler = async function(event) {
 
     return {
       statusCode: 200,
-      headers: { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=3600, s-maxage=3600' },
+      headers: { 
+        'Content-Type': 'image/svg+xml',
+        'Cache-Control': 'public, max-age=3600, s-maxage=3600'
+      },
       body: svg.trim(),
     };
   } catch (err) {
     console.error("SVG Generation Error:", err);
     const errorSvg = `<svg width="400" height="200" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="#f8d7da" /><text x="10" y="50%" font-family="monospace" font-size="16" fill="#721c24" dominant-baseline="middle">Error: ${escapeSVG(err.message)}</text></svg>`;
-    return { statusCode: 500, headers: { 'Content-Type': 'image/svg+xml' }, body: errorSvg.trim() };
+    return { 
+      statusCode: 500,
+      headers: { 'Content-Type': 'image/svg+xml' },
+      body: errorSvg.trim()
+    };
   }
 };
