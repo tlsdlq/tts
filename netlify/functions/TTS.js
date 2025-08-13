@@ -25,34 +25,6 @@ function generateBackgroundSVG(bgType, width, height) {
   const seed = Math.floor(Math.random() * 1000);
   
   switch (bgType) {
-    // --- [신규 추가] '글리치' 테마. 오직 두 번째 레퍼런스 이미지만을 기반으로 제작 ---
-    case 'glitch':
-      const glitchDefs = `
-        <defs>
-            <filter id="glitchFrame" x="0" y="0" width="100%" height="100%">
-                <feTurbulence baseFrequency="0.01 0.4" numOctaves="1" seed="${seed}" type="fractalNoise" result="noise" />
-                <feColorMatrix in="noise" type="matrix" result="monoNoise"
-                    values="0 0 0 0 0.29
-                            0 0 0 0 0
-                            0 0 0 0 0.51
-                            0 0 0 50 -1" />
-                <feComponentTransfer in="monoNoise" result="transfer">
-                  <feFuncA type="gamma" amplitude="2" exponent="2" />
-                </feComponentTransfer>
-                <feMerge>
-                    <feMergeNode in="transfer" />
-                </feMerge>
-            </filter>
-        </defs>
-      `;
-      let glitchContent = glitchDefs;
-      // 1. 연한 라벤더 배경
-      glitchContent += `<rect width="${width}" height="${height}" fill="#dcd0e8" />`;
-      // 2. 글리치 프레임 효과
-      glitchContent += `<rect width="${width}" height="${height}" fill="#4b0082" filter="url(#glitchFrame)" />`;
-      
-      return glitchContent;
-      
     case 'kuro':
       const kuroDefs = `
         <defs>
@@ -111,12 +83,36 @@ function generateBackgroundSVG(bgType, width, height) {
 
       return kuroContent;
 
+    case 'glitch':
+      const glitchDefs = `
+        <defs>
+            <filter id="glitchFrame" x="0" y="0" width="100%" height="100%">
+                <feTurbulence baseFrequency="0.01 0.4" numOctaves="1" seed="${seed}" type="fractalNoise" result="noise" />
+                <feColorMatrix in="noise" type="matrix" result="monoNoise"
+                    values="0 0 0 0 0.29
+                            0 0 0 0 0
+                            0 0 0 0 0.51
+                            0 0 0 50 -1" />
+                <feComponentTransfer in="monoNoise" result="transfer">
+                  <feFuncA type="gamma" amplitude="2" exponent="2" />
+                </feComponentTransfer>
+                <feMerge>
+                    <feMergeNode in="transfer" />
+                </feMerge>
+            </filter>
+        </defs>
+      `;
+      let glitchContent = glitchDefs;
+      glitchContent += `<rect width="${width}" height="${height}" fill="#dcd0e8" />`;
+      glitchContent += `<rect width="${width}" height="${height}" fill="#4b0082" filter="url(#glitchFrame)" />`;
+      return glitchContent;
+      
     case 'stars':
-      // ... (이전과 동일)
+      // ...
       return '';
 
     case 'matrix':
-      // ... (이전과 동일)
+      // ...
       return '';
       
     case 'default':
@@ -135,9 +131,8 @@ exports.handler = async function(event) {
     const queryParams = event.queryStringParameters || {};
     const params = { ...defaultParams, ...queryParams };
     
-    // 글리치 테마를 위한 텍스트 색상 변경
     if(params.bg === 'glitch') {
-        defaultParams.textColor = '#000000'; // 기본 텍스트 색상을 검은색으로
+        defaultParams.textColor = '#ffffff';
         params.textColor = queryParams.textColor || defaultParams.textColor;
     }
     
@@ -158,11 +153,9 @@ exports.handler = async function(event) {
     const backgroundContent = generateBackgroundSVG(params.bg, constants.width, height);
     const startY = Math.round((height / 2) - (totalTextBlockHeight / 2) + (fontSize * 0.8));
     
-    // 글자 스타일: 글리치 테마는 흰색 채움+검은 테두리, 나머지는 검은 테두리만
     const mainTextStyle = params.bg === 'glitch' 
-      ? `fill="${textColor}" paint-order="stroke" stroke="#000000" stroke-width="2px" stroke-linejoin="round"`
+      ? `fill="${textColor}" paint-order="stroke" stroke="#000000" stroke-width="2.5px" stroke-linejoin="round"`
       : `fill="${textColor}" paint-order="stroke" stroke="#000000" stroke-width="2px" stroke-linejoin="round"`;
-
 
     const textElements = lines.map((line, index) => {
       const innerContent = parseBoldText(line);
@@ -171,7 +164,7 @@ exports.handler = async function(event) {
     }).join('');
 
     const svg = `
-      <svg width="${constants.width}" height="${height}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${escapeSVG(rawText)}">
+      <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${escapeSVG(rawText)}">
         <style>
           text { font-family: sans-serif; }
         </style>
@@ -191,10 +184,8 @@ exports.handler = async function(event) {
       statusCode: 200,
       headers: { 
         'Content-Type': 'image/svg+xml',
-        // 캐시를 사용하지 않도록 헤더 변경
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
+        // [수정됨] 동일한 URL 재요청 시에만 캐시가 동작하도록 한 달 유효기간 설정 (최선의 선택)
+        'Cache-Control': 'public, max-age=2592000, s-maxage=2592000',
       },
       body: svg.trim(),
     };
