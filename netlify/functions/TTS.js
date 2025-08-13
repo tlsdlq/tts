@@ -23,55 +23,81 @@ function generateBackgroundSVG(bgType, width, height) {
   switch (bgType) {
     case 'stars':
       let starsContent = '';
-      const starsDefs = `
+      const defs = `
         <defs>
-          <radialGradient id="nebulaGradient" cx="85%" cy="50%" r="70%" fx="80%" fy="50%">
-            <stop offset="0%" stop-color="#3e2a4f" stop-opacity="0.8" />
-            <stop offset="40%" stop-color="#2a2a3e" stop-opacity="0.5" />
-            <stop offset="100%" stop-color="#000000" stop-opacity="0.3" />
+          <radialGradient id="galaxyCore" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#F8F0C4" stop-opacity="0.3" />
+            <stop offset="60%" stop-color="#A18CD1" stop-opacity="0.1" />
+            <stop offset="100%" stop-color="#3f2b4b" stop-opacity="0" />
+          </radialGradient>
+          <radialGradient id="dustLane" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#000000" stop-opacity="0.6" />
+            <stop offset="80%" stop-color="#000000" stop-opacity="0" />
           </radialGradient>
           <filter id="starGlow">
-            <feGaussianBlur stdDeviation="0.7" />
+            <feGaussianBlur stdDeviation="1.2" />
           </filter>
         </defs>
       `;
-      starsContent += starsDefs;
-      starsContent += `<rect width="${width}" height="${height}" fill="#01000a" />`;
-      starsContent += `<rect width="${width}" height="${height}" fill="url(#nebulaGradient)" />`;
-      const totalStars = 400;
-      for (let i = 0; i < totalStars; i++) {
-        const isBrightStar = Math.random() > 0.95;
-        const isInNebula = Math.random() > 0.2;
-        const x = isInNebula ? Math.random() * width * 0.8 + width * 0.2 : Math.random() * width;
+      starsContent += defs;
+      starsContent += `<rect width="${width}" height="${height}" fill="#020111" />`;
+
+      // 은하수 띠와 성간 먼지 그리기
+      starsContent += `<ellipse cx="${width / 2}" cy="${height / 2}" rx="${width / 1.5}" ry="${height / 8}" fill="url(#galaxyCore)" />`;
+      starsContent += `<ellipse cx="${width / 2 + 50}" cy="${height / 2 - 10}" rx="${width / 3}" ry="${height / 12}" fill="url(#dustLane)" />`;
+
+      // 별 생성
+      const totalStarIterations = 800;
+      const bandStartY = height * 0.35;
+      const bandEndY = height * 0.65;
+
+      for (let i = 0; i < totalStarIterations; i++) {
         const y = Math.random() * height;
-        const r = isBrightStar ? Math.random() * 1.2 + 0.8 : Math.random() * 0.7 + 0.2;
-        const opacity = Math.random() * 0.6 + 0.4;
-        const color = isBrightStar ? '#ffffff' : '#e0e0ff';
-        starsContent += `<circle cx="${x}" cy="${y}" r="${r}" fill="${color}" opacity="${opacity}" ${isBrightStar ? 'filter="url(#starGlow)"' : ''} />`;
+        const isInBand = y > bandStartY && y < bandEndY;
+        
+        // 은하수 띠 안쪽에 별 생성 확률 높임
+        if (isInBand && Math.random() < 0.7 || !isInBand && Math.random() < 0.1) {
+          const x = Math.random() * width;
+          const isBright = isInBand && Math.random() < 0.2;
+          const r = isBright ? Math.random() * 1.5 + 0.8 : Math.random() * 0.7 + 0.1;
+          const opacity = Math.random() * 0.8 + 0.2;
+          const color = isBright ? '#ffffff' : '#e0e0ff';
+          starsContent += `<circle cx="${x}" cy="${y}" r="${r}" fill="${color}" opacity="${opacity}" ${isBright ? 'filter="url(#starGlow)"' : ''} />`;
+        }
       }
       return starsContent;
 
     case 'matrix':
-      const matrixChars = 'アァカサタナハマヤャラワガザダバパイィキシチニミリヰギジヂビピウゥクスツヌフムユュルグズブプエェケセテネヘメレヱゲゼデベペオォコソトノホモヨョロヲゴゾドボポヴッンABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-      const fontSize = 18;
-      const columns = Math.floor(width / fontSize);
+      const matrixChars = 'qwertyuiopasdfghjklzxcvbnmABCDEFGHIJKLMNOPQRSTUVWXYZΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ=/<>+*&%$#@!';
+      const binaryChars = '01';
+      const matrixFontSize = 18;
+      const columnWidth = matrixFontSize * 0.9;
+      const columns = Math.floor(width / columnWidth);
       let matrixContent = '';
-      const matrixDefs = `<defs><filter id="matrixGlow"><feGaussianBlur in="SourceGraphic" stdDeviation="0.8" result="blur" /></filter></defs>`;
+
+      const matrixDefs = `<defs><filter id="matrixGlow"><feGaussianBlur in="SourceGraphic" stdDeviation="0.5" result="blur" /></filter><filter id="leadingGlow"><feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="blur" /></filter></defs>`;
       matrixContent += matrixDefs;
       matrixContent += `<rect width="${width}" height="${height}" fill="#000000" />`;
+
       for (let i = 0; i < columns; i++) {
-        if (Math.random() < 0.25) continue;
-        const startY = Math.random() * height * 1.2 - height * 0.2;
-        const streamLength = Math.floor(Math.random() * (height / fontSize * 0.7)) + 10;
+        if (Math.random() < 0.1) continue;
+        const isBinaryStream = Math.random() < 0.15;
+        const charSet = isBinaryStream ? binaryChars : matrixChars;
+        const xJitter = (Math.random() - 0.5) * columnWidth;
+        const x = i * columnWidth + xJitter;
+        const startY = Math.random() * height * 1.5 - height * 0.5;
+        const streamLength = Math.floor(Math.random() * (height / matrixFontSize * 0.8)) + 10;
+        
         for (let j = 0; j < streamLength; j++) {
-          const charIndex = Math.floor(Math.random() * matrixChars.length);
-          const char = matrixChars[charIndex];
-          const y = startY + j * fontSize;
+          const charIndex = Math.floor(Math.random() * charSet.length);
+          const char = charSet[charIndex];
+          const y = startY + j * matrixFontSize;
           if (y < 0 || y > height) continue;
           const isLeading = j === streamLength - 1;
-          const color = isLeading ? '#e0ffe0' : '#00ff41';
-          const opacity = Math.max(0.1, (j / streamLength) * (j / streamLength) + 0.1);
-          matrixContent += `<text x="${i * fontSize}" y="${y}" font-family="monospace" font-size="${fontSize}px" fill="${color}" opacity="${opacity}" filter="url(#matrixGlow)">${escapeSVG(char)}</text>`;
+          const color = isLeading ? '#ffffff' : '#00ff41';
+          const opacity = isBinaryStream ? 0.3 + (j / streamLength) * 0.7 : 0.1 + (j / streamLength) * 0.9;
+          const filter = isLeading ? 'url(#leadingGlow)' : 'url(#matrixGlow)';
+          matrixContent += `<text x="${x}" y="${y}" font-family="monospace" font-size="${matrixFontSize}px" fill="${color}" opacity="${opacity}" filter="${filter}">${escapeSVG(char)}</text>`;
         }
       }
       return matrixContent;
@@ -79,14 +105,7 @@ function generateBackgroundSVG(bgType, width, height) {
     case 'default':
     default:
       let defaultContent = '';
-      const defaultDefs = `
-        <defs>
-          <linearGradient id="defaultSky" x1="50%" y1="0%" x2="50%" y2="100%">
-            <stop offset="0%" stop-color="#0d1b2a" />
-            <stop offset="100%" stop-color="#1b263b" />
-          </linearGradient>
-        </defs>
-      `;
+      const defaultDefs = `<defs><linearGradient id="defaultSky" x1="50%" y1="0%" x2="50%" y2="100%"><stop offset="0%" stop-color="#0d1b2a" /><stop offset="100%" stop-color="#1b263b" /></linearGradient></defs>`;
       defaultContent += defaultDefs;
       defaultContent += `<rect width="${width}" height="${height}" fill="url(#defaultSky)" />`;
       const defaultStarCount = 300;
@@ -113,11 +132,11 @@ const constants = {
 exports.handler = async function(event) {
   try {
     const defaultParams = {
-      text: 'SVG로 생성된 동적 배경입니다.|{default}, {stars}, {matrix} 테마를 사용할 수 있습니다.',
+      text: '실감 나게 개선된 {은하수} 배경입니다.|성간 먼지와 별의 밀도를 조절했습니다.',
       textColor: '#ffffff',
       fontSize: 16,
       align: 'left',
-      bg: 'default',
+      bg: 'stars',
     };
     const queryParams = event.queryStringParameters || {};
     const params = { ...defaultParams, ...queryParams };
