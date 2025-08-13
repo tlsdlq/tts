@@ -54,6 +54,7 @@ function generateBackgroundSVG(bgType, width, height) {
       kuroContent += kuroDefs;
 
       // --- 전체 영역에 퍼진 정교한 미로 패턴 ---
+      const scale = Math.min(width, height) / 800; // 스케일 정의
       const scaleX = width / 800;
       const scaleY = height / 600;
       
