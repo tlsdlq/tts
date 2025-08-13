@@ -196,10 +196,17 @@ exports.handler = async function(event) {
     
     const startY = Math.round((height / 2) - (totalTextBlockHeight / 2) + (fontSize * 0.8));
 
+    // --- [수정된 부분 시작] ---
+    // 각 줄을 올바르게 렌더링하기 위한 로직 수정
     const textElements = lines.map((line, index) => {
       const innerContent = parseBoldText(line);
-      const dy = index === 0 ? '0' : `${constants.lineHeight}em`;
-      return `<tspan x="${x}" dy="${dy}">${innerContent}</tspan>`;
+      if (index === 0) {
+        // 첫 번째 줄은 dy 없이 x 좌표만 설정합니다.
+        return `<tspan x="${x}">${innerContent}</tspan>`;
+      } else {
+        // 두 번째 줄부터는 dy로 줄바꿈을 하고 x 좌표를 다시 설정합니다.
+        return `<tspan x="${x}" dy="${constants.lineHeight}em">${innerContent}</tspan>`;
+      }
     }).join('');
 
     const mainTextStyle = `paint-order="stroke" stroke="#000000" stroke-width="2px" stroke-linejoin="round"`;
@@ -211,6 +218,7 @@ exports.handler = async function(event) {
         </style>
         ${backgroundContent}
         <text
+          x="${x}"
           y="${startY}"
           font-family="sans-serif"
           font-size="${fontSize}px"
@@ -222,6 +230,7 @@ exports.handler = async function(event) {
         </text>
       </svg>
     `;
+    // --- [수정된 부분 끝] ---
 
     return {
       statusCode: 200,
