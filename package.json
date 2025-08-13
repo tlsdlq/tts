@@ -1,5 +1,12 @@
 {
+  "name": "svg-to-webp-generator",
+  "version": "1.0.0",
+  "description": "Dynamic SVG and WebP image generator",
+  "main": "index.js",
   "dependencies": {
-    "sharp": "^0.32.0"
+    "sharp": "^0.32.6"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }
