@@ -53,50 +53,60 @@ function generateBackgroundSVG(bgType, width, height) {
       let kuroContent = `<rect width="${width}" height="${height}" fill="#000008" />`;
       kuroContent += kuroDefs;
 
-      // --- 원본 스타일의 정교한 미로 패턴 ---
-      const scale = Math.min(width, height) / 800;
-      const unit = 25 * scale; // 기본 단위
+      // --- 전체 영역에 퍼진 정교한 미로 패턴 ---
+      const scaleX = width / 800;
+      const scaleY = height / 600;
       
       let pathData = '';
       
-      // 복잡하고 연결된 미로 구조를 한 번에 그리기
+      // 원본 SVG의 구조를 스케일링해서 적용 (외곽 프레임 제외)
       const maze = [
-        // 왼쪽 세로 메인 라인
-        `M${unit*2} ${unit*2} L${unit*2} ${height-unit*2}`,
-        
         // 상단 복잡한 구조
-        `M${unit*2} ${unit*3} L${unit*8} ${unit*3} L${unit*8} ${unit*6} L${unit*14} ${unit*6} L${unit*14} ${unit*2} L${unit*20} ${unit*2}`,
-        `M${unit*20} ${unit*2} L${unit*20} ${unit*8} L${unit*26} ${unit*8} L${unit*26} ${unit*4} L${unit*30} ${unit*4}`,
+        `M${40*scaleX} ${120*scaleY} L${180*scaleX} ${120*scaleY} L${180*scaleX} ${80*scaleY} L${280*scaleX} ${80*scaleY} L${280*scaleX} ${160*scaleY} L${200*scaleX} ${160*scaleY} L${200*scaleX} ${200*scaleY} L${120*scaleX} ${200*scaleY} L${120*scaleX} ${280*scaleY}`,
+        `M${280*scaleX} ${80*scaleY} L${380*scaleX} ${80*scaleY} L${380*scaleX} ${40*scaleY}`,
+        `M${380*scaleX} ${120*scaleY} L${480*scaleX} ${120*scaleY} L${480*scaleX} ${200*scaleY} L${420*scaleX} ${200*scaleY} L${420*scaleX} ${280*scaleY} L${360*scaleX} ${280*scaleY} L${360*scaleX} ${240*scaleY}`,
+        `M${480*scaleX} ${120*scaleY} L${580*scaleX} ${120*scaleY} L${580*scaleX} ${80*scaleY} L${680*scaleX} ${80*scaleY} L${680*scaleX} ${160*scaleY} L${620*scaleX} ${160*scaleY} L${620*scaleX} ${240*scaleY}`,
+        `M${680*scaleX} ${80*scaleY} L${760*scaleX} ${80*scaleY}`,
         
-        // 중앙 복합 구조
-        `M${unit*8} ${unit*6} L${unit*8} ${unit*12} L${unit*6} ${unit*12} L${unit*6} ${unit*16} L${unit*12} ${unit*16}`,
-        `M${unit*12} ${unit*16} L${unit*12} ${unit*10} L${unit*18} ${unit*10} L${unit*18} ${unit*14} L${unit*24} ${unit*14}`,
-        `M${unit*14} ${unit*6} L${unit*14} ${unit*12} L${unit*20} ${unit*12}`,
+        // 중앙 영역의 복잡한 패턴
+        `M${120*scaleX} ${280*scaleY} L${240*scaleX} ${280*scaleY} L${240*scaleX} ${360*scaleY} L${160*scaleX} ${360*scaleY} L${160*scaleX} ${440*scaleY} L${280*scaleX} ${440*scaleY} L${280*scaleX} ${320*scaleY} L${360*scaleX} ${320*scaleY}`,
+        `M${360*scaleX} ${240*scaleY} L${360*scaleX} ${320*scaleY} L${420*scaleX} ${320*scaleY} L${420*scaleX} ${360*scaleY} L${500*scaleX} ${360*scaleY} L${500*scaleX} ${280*scaleY} L${580*scaleX} ${280*scaleY} L${580*scaleX} ${240*scaleY}`,
+        `M${580*scaleX} ${240*scaleY} L${620*scaleX} ${240*scaleY} L${620*scaleX} ${320*scaleY} L${680*scaleX} ${320*scaleY} L${680*scaleX} ${280*scaleY} L${760*scaleX} ${280*scaleY}`,
         
-        // 오른쪽 구조
-        `M${unit*20} ${unit*8} L${unit*16} ${unit*8} L${unit*16} ${unit*18} L${unit*22} ${unit*18}`,
-        `M${unit*24} ${unit*14} L${unit*24} ${unit*20} L${unit*18} ${unit*20} L${unit*18} ${unit*22} L${unit*28} ${unit*22}`,
-        `M${unit*26} ${unit*8} L${unit*26} ${unit*16} L${unit*30} ${unit*16}`,
+        // 하단 구조
+        `M${160*scaleX} ${440*scaleY} L${160*scaleX} ${520*scaleY} L${240*scaleX} ${520*scaleY} L${240*scaleX} ${480*scaleY} L${320*scaleX} ${480*scaleY} L${320*scaleX} ${520*scaleY} L${400*scaleX} ${520*scaleY} L${400*scaleX} ${440*scaleY}`,
+        `M${400*scaleX} ${440*scaleY} L${480*scaleX} ${440*scaleY} L${480*scaleX} ${400*scaleY} L${560*scaleX} ${400*scaleY} L${560*scaleX} ${480*scaleY} L${640*scaleX} ${480*scaleY} L${640*scaleX} ${440*scaleY} L${720*scaleX} ${440*scaleY} L${720*scaleX} ${520*scaleY}`,
         
-        // 하단 연결부
-        `M${unit*2} ${unit*18} L${unit*10} ${unit*18} L${unit*10} ${unit*22}`,
-        `M${unit*22} ${unit*18} L${unit*22} ${unit*12}`,
+        // 세로 연결선들
+        `M${200*scaleX} ${200*scaleY} L${200*scaleX} ${280*scaleY}`,
+        `M${420*scaleX} ${280*scaleY} L${420*scaleX} ${200*scaleY}`,
+        `M${500*scaleX} ${360*scaleY} L${500*scaleX} ${440*scaleY} L${400*scaleX} ${440*scaleY}`,
+        `M${680*scaleX} ${320*scaleY} L${680*scaleX} ${400*scaleY} L${640*scaleX} ${400*scaleY} L${640*scaleX} ${440*scaleY}`,
         
-        // 추가 세부 구조들
-        `M${unit*30} ${unit*4} L${unit*30} ${unit*10} L${unit*28} ${unit*10} L${unit*28} ${unit*12}`,
-        `M${unit*28} ${unit*12} L${unit*28} ${unit*22}`,
+        // 추가 내부 구조들
+        `M${240*scaleX} ${360*scaleY} L${320*scaleX} ${360*scaleY} L${320*scaleX} ${400*scaleY} L${280*scaleX} ${400*scaleY} L${280*scaleX} ${440*scaleY}`,
+        `M${360*scaleX} ${320*scaleY} L${360*scaleX} ${400*scaleY} L${320*scaleX} ${400*scaleY}`,
+        `M${580*scaleX} ${280*scaleY} L${580*scaleX} ${320*scaleY}`,
+        `M${500*scaleX} ${200*scaleY} L${540*scaleX} ${200*scaleY} L${540*scaleX} ${160*scaleY} L${580*scaleX} ${160*scaleY}`,
+        `M${120*scaleX} ${200*scaleY} L${160*scaleX} ${200*scaleY} L${160*scaleX} ${240*scaleY} L${200*scaleX} ${240*scaleY}`,
         
-        // 내부 작은 구조들
-        `M${unit*4} ${unit*8} L${unit*4} ${unit*14} L${unit*2} ${unit*14}`,
-        `M${unit*6} ${unit*4} L${unit*6} ${unit*8}`,
-        `M${unit*10} ${unit*10} L${unit*10} ${unit*14}`,
-        `M${unit*20} ${unit*16} L${unit*20} ${unit*20}`,
+        // 복잡한 내부 연결부들
+        `M${40*scaleX} ${320*scaleY} L${80*scaleX} ${320*scaleY} L${80*scaleX} ${400*scaleY} L${120*scaleX} ${400*scaleY} L${120*scaleX} ${360*scaleY}`,
+        `M${240*scaleX} ${280*scaleY} L${280*scaleX} ${280*scaleY}`,
+        `M${420*scaleX} ${360*scaleY} L${420*scaleX} ${400*scaleY} L${480*scaleX} ${400*scaleY}`,
+        `M${620*scaleX} ${320*scaleY} L${620*scaleX} ${360*scaleY} L${580*scaleX} ${360*scaleY}`,
         
-        // 연결 세그먼트들
-        `M${unit*12} ${unit*10} L${unit*10} ${unit*10}`,
-        `M${unit*16} ${unit*14} L${unit*16} ${unit*16}`,
-        `M${unit*24} ${unit*12} L${unit*26} ${unit*12}`,
-        `M${unit*22} ${unit*16} L${unit*24} ${unit*16}`,
+        // 미세한 연결 부분들
+        `M${340*scaleX} ${240*scaleY} L${340*scaleX} ${280*scaleY}`,
+        `M${460*scaleX} ${280*scaleY} L${460*scaleX} ${320*scaleY}`,
+        `M${200*scaleX} ${240*scaleY} L${240*scaleX} ${240*scaleY}`,
+        `M${320*scaleX} ${320*scaleY} L${340*scaleX} ${320*scaleY}`,
+        
+        // 가장자리 영역까지 확장
+        `M${20*scaleX} ${40*scaleY} L${20*scaleX} ${560*scaleY}`,
+        `M${780*scaleX} ${100*scaleY} L${780*scaleX} ${500*scaleY}`,
+        `M${40*scaleX} ${40*scaleY} L${760*scaleX} ${40*scaleY}`,
+        `M${160*scaleX} ${560*scaleY} L${640*scaleX} ${560*scaleY}`,
       ];
       
       pathData = maze.join(' ');
