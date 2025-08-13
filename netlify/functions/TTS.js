@@ -41,7 +41,6 @@ function generateBackgroundSVG(bgType, width, height) {
       starsContent += defs;
       starsContent += `<rect width="${width}" height="${height}" fill="#000000" />`;
 
-      // [개선] 유기적인 은하수 성운 그리기
       for (let i = 0; i < 15; i++) {
         const cx = width * 0.2 + Math.random() * width * 0.6;
         const cy = height * 0.3 + Math.random() * height * 0.4;
@@ -53,8 +52,6 @@ function generateBackgroundSVG(bgType, width, height) {
         starsContent += `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="${fill}" opacity="${opacity}" transform="rotate(${rotation} ${cx} ${cy})" />`;
       }
       
-      // [개선] 별 다층 구조 생성
-      // 1. 은하 먼지 (Galactic Dust)
       for (let i = 0; i < 2000; i++) {
         const x = Math.random() * width;
         const y = height * 0.2 + Math.random() * height * 0.6;
@@ -62,7 +59,6 @@ function generateBackgroundSVG(bgType, width, height) {
         const opacity = Math.random() * 0.5 + 0.1;
         starsContent += `<circle cx="${x}" cy="${y}" r="${r}" fill="#ffffff" opacity="${opacity}" />`;
       }
-      // 2. 일반 별 (Field Stars)
       for (let i = 0; i < 300; i++) {
         const x = Math.random() * width;
         const y = Math.random() * height;
@@ -70,22 +66,20 @@ function generateBackgroundSVG(bgType, width, height) {
         const opacity = Math.random() * 0.7 + 0.3;
         starsContent += `<circle cx="${x}" cy="${y}" r="${r}" fill="#f0f8ff" opacity="${opacity}" />`;
       }
-      // 3. 주요 별 (Prominent Stars)
       for (let i = 0; i < 10; i++) {
         const x = Math.random() * width;
         const y = Math.random() * height;
         const r = Math.random() * 1.5 + 0.8;
         const colorRoll = Math.random();
         let color = '#ffffff';
-        if (colorRoll > 0.9) color = '#ffccaa'; // 노란색
-        else if (colorRoll > 0.8) color = '#aaccff'; // 푸른색
+        if (colorRoll > 0.9) color = '#ffccaa';
+        else if (colorRoll > 0.8) color = '#aaccff';
         starsContent += `<circle cx="${x}" cy="${y}" r="${r}" fill="${color}" filter="url(#brightStarGlow)" />`;
       }
-      // 4. 유성 (Shooting Stars)
       for (let i = 0; i < (Math.random() > 0.5 ? 1 : 2); i++) {
         const x1 = Math.random() * width;
         const y1 = Math.random() * height;
-        const length = Math.random() * 300 + 100;
+        const length = Math.random() * 200 + 100;
         const angle = Math.random() * 360;
         const x2 = x1 + length * Math.cos(angle * Math.PI / 180);
         const y2 = y1 + length * Math.sin(angle * Math.PI / 180);
@@ -136,7 +130,7 @@ function generateBackgroundSVG(bgType, width, height) {
       const defaultDefs = `<defs><linearGradient id="defaultSky" x1="50%" y1="0%" x2="50%" y2="100%"><stop offset="0%" stop-color="#0d1b2a" /><stop offset="100%" stop-color="#1b263b" /></linearGradient></defs>`;
       defaultContent += defaultDefs;
       defaultContent += `<rect width="${width}" height="${height}" fill="url(#defaultSky)" />`;
-      const defaultStarCount = 300;
+      const defaultStarCount = 200; // 너비가 줄었으므로 별 개수 소폭 조정
       for (let i = 0; i < defaultStarCount; i++) {
         const x = Math.random() * width;
         const y = Math.random() * height;
@@ -150,7 +144,7 @@ function generateBackgroundSVG(bgType, width, height) {
 
 // --- 상수 ---
 const constants = {
-  width: 1200,
+  width: 800, // [수정] 너비를 800px로 변경
   paddingX: 40,
   paddingY: 60,
   lineHeight: 1.6,
@@ -160,11 +154,11 @@ const constants = {
 exports.handler = async function(event) {
   try {
     const defaultParams = {
-      text: '더욱 사실적으로 개선된 {은하수} 배경입니다.|유성우가 떨어질 수도 있습니다.',
+      text: '너비가 800px로 설정되었습니다.|{동적} SVG 생성기',
       textColor: '#ffffff',
       fontSize: 16,
       align: 'left',
-      bg: 'stars',
+      bg: 'default',
     };
     const queryParams = event.queryStringParameters || {};
     const params = { ...defaultParams, ...queryParams };
@@ -197,7 +191,7 @@ exports.handler = async function(event) {
     const mainTextStyle = `paint-order="stroke" stroke="#000000" stroke-width="2px" stroke-linejoin="round"`;
 
     const svg = `
-      <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${escapeSVG(rawText)}">
+      <svg width="${constants.width}" height="${height}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${escapeSVG(rawText)}">
         <style>
           text { white-space: pre; }
         </style>
