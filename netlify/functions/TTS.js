@@ -100,7 +100,7 @@ function generateBackgroundSVG(bgType, width, height) {
       const english = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
       const numbers = '0123456789';
       const japanese = 'アイウエオカキクケコサシスセソタチツテトナニヌネノ';
-      const hangul = '가나다라마바사아자차카타파하';
+      const hangul = 'ㅂㅈㄷㄱㅅㅛㅕㅑㅐㅔㅁㄴㅇㄹㅎㅗㅓㅏㅣㅋㅌㅊㅍㅠㅜㅡ';
       const symbols = '-=/<>+*&%$#@!';
       const matrixChars = english.repeat(5) + numbers.repeat(2) + hangul + japanese + symbols;
       const matrixFontSize = 18;
