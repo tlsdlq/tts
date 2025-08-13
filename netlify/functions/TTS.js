@@ -1,4 +1,5 @@
 // --- 유틸리티 함수 ---
+const sharp = require('sharp');
 
 function escapeSVG(str) {
   if (typeof str !== 'string') return '';
@@ -155,13 +156,35 @@ function generateBackgroundSVG(bgType, width, height) {
   }
 }
 
-// --- 상수 (기존 값 800px 유지) ---
+// --- 상수 ---
 const constants = {
   width: 800,
   paddingX: 40,
   paddingY: 60,
   lineHeight: 1.6,
 };
+
+// --- SVG를 WebP로 변환하는 함수 ---
+async function svgToWebP(svgString, quality = 80, width = null) {
+  const buffer = Buffer.from(svgString);
+  
+  let sharpInstance = sharp(buffer, { density: 150 }); // DPI 설정으로 고품질 유지
+  
+  if (width) {
+    sharpInstance = sharpInstance.resize(width, null, { 
+      withoutEnlargement: true,
+      background: { r: 0, g: 0, b: 0, alpha: 1 }
+    });
+  }
+  
+  return await sharpInstance
+    .webp({ 
+      quality: quality,
+      effort: 6, // 최대 압축 효율
+      smartSubsample: true 
+    })
+    .toBuffer();
+}
 
 // --- 주 함수 핸들러 ---
 exports.handler = async function(event) {
@@ -172,12 +195,18 @@ exports.handler = async function(event) {
       fontSize: 16,
       align: 'left',
       bg: 'default',
+      format: 'webp', // 새로운 파라미터
+      quality: '80',   // WebP 품질 설정
+      width: null      // 리사이즈 옵션
     };
+    
     const queryParams = event.queryStringParameters || {};
     const params = { ...defaultParams, ...queryParams };
     
     const fontSize = Math.max(10, Math.min(parseInt(params.fontSize, 10) || defaultParams.fontSize, 120));
     const textColor = escapeSVG(params.textColor);
+    const quality = Math.max(10, Math.min(parseInt(params.quality, 10) || 80, 100));
+    const outputWidth = params.width ? parseInt(params.width, 10) : null;
 
     let textAnchor, x;
     switch (params.align) {
@@ -196,7 +225,6 @@ exports.handler = async function(event) {
     
     const startY = Math.round((height / 2) - (totalTextBlockHeight / 2) + (fontSize * 0.8));
 
-    // --- 수정된 부분: 각 줄을 개별 text 엘리먼트로 생성 ---
     const mainTextStyle = `paint-order="stroke" stroke="#000000" stroke-width="2px" stroke-linejoin="round"`;
 
     const textElements = lines.map((line, index) => {
@@ -216,16 +244,34 @@ exports.handler = async function(event) {
       </svg>
     `;
 
-    return {
-      statusCode: 200,
-      headers: { 
-        'Content-Type': 'image/svg+xml',
-        'Cache-Control': 'public, max-age=3600, s-maxage=3600'
-      },
-      body: svg.trim(),
-    };
+    // 포맷에 따라 출력 결정
+    if (params.format === 'svg') {
+      return {
+        statusCode: 200,
+        headers: { 
+          'Content-Type': 'image/svg+xml',
+          'Cache-Control': 'public, max-age=3600, s-maxage=3600'
+        },
+        body: svg.trim(),
+      };
+    } else {
+      // WebP로 변환
+      const webpBuffer = await svgToWebP(svg, quality, outputWidth);
+      
+      return {
+        statusCode: 200,
+        headers: { 
+          'Content-Type': 'image/webp',
+          'Cache-Control': 'public, max-age=3600, s-maxage=3600',
+          'Content-Length': webpBuffer.length.toString()
+        },
+        body: webpBuffer.toString('base64'),
+        isBase64Encoded: true
+      };
+    }
+    
   } catch (err) {
-    console.error("SVG Generation Error:", err);
+    console.error("Image Generation Error:", err);
     const errorSvg = `<svg width="400" height="200" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="#f8d7da" /><text x="10" y="50%" font-family="monospace" font-size="16" fill="#721c24" dominant-baseline="middle">Error: ${escapeSVG(err.message)}</text></svg>`;
     return { 
       statusCode: 500,
