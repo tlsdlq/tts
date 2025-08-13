@@ -134,14 +134,45 @@ function generateBackgroundSVG(bgType, width, height) {
         connectionPoints.push({x: startX, y: bottomY}, {x: midX, y: bottomY}, {x: midX, y: upY}, {x: endX, y: upY});
       }
       
+      // 세로 연결선들 추가
+      const verticalSections = 6;
+      for (let i = 1; i < verticalSections; i++) {
+        const x = margin + (width - 2 * margin) * (i / verticalSections);
+        const startY = margin + step + Math.random() * step;
+        const endY = height - margin - step - Math.random() * step;
+        const segments = Math.floor(Math.random() * 3) + 2; // 2-4 세그먼트
+        
+        let currentY = startY;
+        let currentX = x;
+        pathData += ` M${currentX} ${currentY}`;
+        
+        for (let j = 0; j < segments; j++) {
+          const segmentHeight = (endY - startY) / segments;
+          const nextY = currentY + segmentHeight;
+          const jitter = (Math.random() - 0.5) * step * 0.3;
+          
+          if (j === segments - 1) {
+            // 마지막 세그먼트는 직선으로
+            pathData += ` L${currentX} ${endY}`;
+          } else {
+            // 중간에 약간의 굴곡 추가
+            const midY = currentY + segmentHeight / 2;
+            pathData += ` L${currentX + jitter} ${midY} L${currentX} ${nextY}`;
+          }
+          currentY = nextY;
+        }
+        
+        connectionPoints.push({x: currentX, y: startY}, {x: currentX, y: endY});
+      }
+      
       // 기존 연결점들 사이의 추가 연결선들
       for (let i = 0; i < connectionPoints.length - 1; i++) {
-        if (Math.random() > 0.7) { // 30% 확률로 연결
+        if (Math.random() > 0.8) { // 20% 확률로 연결
           const point1 = connectionPoints[i];
           const point2 = connectionPoints[i + 1];
           const distance = Math.sqrt(Math.pow(point2.x - point1.x, 2) + Math.pow(point2.y - point1.y, 2));
           
-          if (distance < step * 2 && distance > step * 0.3) {
+          if (distance < step * 1.5 && distance > step * 0.4) {
             pathData += ` M${point1.x} ${point1.y} L${point2.x} ${point2.y}`;
           }
         }
