@@ -56,79 +56,94 @@ function generateBackgroundSVG(bgType, width, height) {
       // --- 동적 미로 패턴 생성 로직 ---
       const scale = Math.min(width, height) / 800; // 크기에 따른 스케일링
       const baseSize = 40 * scale;
+      const margin = baseSize;
+      const step = baseSize * 0.7;
       
-      // 메인 미로 구조 - 굵은 선들
+      // 연결점들을 저장할 배열
+      const connectionPoints = [];
+      
+      // 메인 미로 구조 - 연결된 패스로 생성
       let pathData = '';
       
-      // 외곽 프레임
-      const margin = baseSize;
-      pathData += `M${margin} ${margin} L${margin} ${height - margin} L${width - margin} ${height - margin} L${width - margin} ${margin} L${margin} ${margin}`;
-      
-      // 상단 복잡한 구조
-      const step = baseSize * 0.8;
-      for (let i = 0; i < 5; i++) {
-        const startX = margin + (width - 2 * margin) * (i / 5);
-        const endX = startX + (width - 2 * margin) / 6;
-        const y1 = margin + step * (1 + Math.random());
-        const y2 = y1 + step * (1 + Math.random() * 0.5);
+      // 상단 가로 구조들
+      const topY = margin + step;
+      for (let i = 0; i < 4; i++) {
+        const startX = margin + (width - 2 * margin) * (i / 4);
+        const endX = startX + (width - 2 * margin) / 5;
+        const offsetY = topY + (Math.random() - 0.5) * step * 0.5;
         
-        if (Math.random() > 0.3) {
-          pathData += ` M${startX} ${y1} L${endX} ${y1} L${endX} ${y2}`;
+        pathData += ` M${startX} ${offsetY} L${endX} ${offsetY}`;
+        connectionPoints.push({x: startX, y: offsetY}, {x: endX, y: offsetY});
+        
+        // 일부 지점에서 세로 연결
+        if (Math.random() > 0.4) {
+          const vertY = offsetY + step * (1 + Math.random() * 0.8);
+          pathData += ` L${endX} ${vertY}`;
+          connectionPoints.push({x: endX, y: vertY});
         }
       }
       
-      // 중앙 영역의 복잡한 패턴
+      // 중앙 영역의 복합 구조
       const centerY = height / 2;
-      const sections = 6;
-      for (let i = 0; i < sections; i++) {
-        const x = margin + (width - 2 * margin) * (i / sections);
-        const nextX = margin + (width - 2 * margin) * ((i + 1) / sections);
-        const midX = (x + nextX) / 2;
+      const midSections = 5;
+      
+      for (let i = 0; i < midSections; i++) {
+        const baseX = margin + (width - 2 * margin) * (i / midSections);
+        const sectionWidth = (width - 2 * margin) / midSections;
+        const midX = baseX + sectionWidth / 2;
+        const endX = baseX + sectionWidth;
         
-        // 수직선
-        if (Math.random() > 0.4) {
-          const startY = centerY - step * (1 + Math.random());
-          const endY = centerY + step * (1 + Math.random());
-          pathData += ` M${midX} ${startY} L${midX} ${endY}`;
-        }
+        // 복잡한 연결 패턴
+        const pattern = Math.floor(Math.random() * 3);
         
-        // 수평선
-        if (Math.random() > 0.3) {
-          const y = centerY + (Math.random() - 0.5) * step * 2;
-          pathData += ` M${x} ${y} L${nextX} ${y}`;
-        }
-        
-        // L자 형태 연결
-        if (Math.random() > 0.5) {
-          const cornerY = centerY + (Math.random() - 0.5) * step;
-          pathData += ` M${x} ${cornerY} L${midX} ${cornerY} L${midX} ${cornerY + step}`;
+        switch(pattern) {
+          case 0: // L자 패턴
+            const cornerY = centerY + (Math.random() - 0.5) * step;
+            const extendX = midX + sectionWidth * 0.3;
+            const extendY = cornerY + step * (0.5 + Math.random() * 0.5);
+            pathData += ` M${baseX} ${cornerY} L${extendX} ${cornerY} L${extendX} ${extendY}`;
+            connectionPoints.push({x: baseX, y: cornerY}, {x: extendX, y: cornerY}, {x: extendX, y: extendY});
+            break;
+            
+          case 1: // U자 패턴
+            const uY1 = centerY - step * (0.3 + Math.random() * 0.4);
+            const uY2 = centerY + step * (0.3 + Math.random() * 0.4);
+            pathData += ` M${midX} ${uY1} L${midX} ${uY2} L${endX} ${uY2}`;
+            connectionPoints.push({x: midX, y: uY1}, {x: midX, y: uY2}, {x: endX, y: uY2});
+            break;
+            
+          case 2: // 복잡한 지그재그
+            const zigY1 = centerY - step * 0.5;
+            const zigY2 = centerY + step * 0.5;
+            const zigX = baseX + sectionWidth * 0.6;
+            pathData += ` M${baseX} ${zigY1} L${zigX} ${zigY1} L${zigX} ${zigY2} L${endX} ${zigY2}`;
+            connectionPoints.push({x: baseX, y: zigY1}, {x: zigX, y: zigY1}, {x: zigX, y: zigY2}, {x: endX, y: zigY2});
+            break;
         }
       }
       
       // 하단 구조
       const bottomY = height - margin - step;
-      for (let i = 0; i < 4; i++) {
-        const x1 = margin + (width - 2 * margin) * (i / 4);
-        const x2 = x1 + (width - 2 * margin) / 5;
-        const y1 = bottomY - step * Math.random();
+      for (let i = 0; i < 3; i++) {
+        const startX = margin + (width - 2 * margin) * (i / 3);
+        const midX = startX + (width - 2 * margin) / 6;
+        const endX = startX + (width - 2 * margin) / 4;
+        const upY = bottomY - step * (0.5 + Math.random() * 0.5);
         
-        if (Math.random() > 0.4) {
-          pathData += ` M${x1} ${y1} L${x2} ${y1} L${x2} ${bottomY}`;
-        }
+        pathData += ` M${startX} ${bottomY} L${midX} ${bottomY} L${midX} ${upY} L${endX} ${upY}`;
+        connectionPoints.push({x: startX, y: bottomY}, {x: midX, y: bottomY}, {x: midX, y: upY}, {x: endX, y: upY});
       }
       
-      // 추가 연결부들
-      for (let i = 0; i < 8; i++) {
-        const x = margin + Math.random() * (width - 2 * margin);
-        const y = margin + Math.random() * (height - 2 * margin);
-        const length = step * (0.5 + Math.random() * 0.5);
-        
-        if (Math.random() > 0.5) {
-          // 수평선
-          pathData += ` M${x} ${y} L${x + length} ${y}`;
-        } else {
-          // 수직선
-          pathData += ` M${x} ${y} L${x} ${y + length}`;
+      // 기존 연결점들 사이의 추가 연결선들
+      for (let i = 0; i < connectionPoints.length - 1; i++) {
+        if (Math.random() > 0.7) { // 30% 확률로 연결
+          const point1 = connectionPoints[i];
+          const point2 = connectionPoints[i + 1];
+          const distance = Math.sqrt(Math.pow(point2.x - point1.x, 2) + Math.pow(point2.y - point1.y, 2));
+          
+          if (distance < step * 2 && distance > step * 0.3) {
+            pathData += ` M${point1.x} ${point1.y} L${point2.x} ${point2.y}`;
+          }
         }
       }
       
