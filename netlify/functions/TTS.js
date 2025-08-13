@@ -25,6 +25,77 @@ function generateBackgroundSVG(bgType, width, height) {
   const seed = Math.floor(Math.random() * 1000);
   
   switch (bgType) {
+    // --- [신규 추가] 'kuro' 테마 ---
+    case 'kuro':
+      const kuroDefs = `
+        <defs>
+          <filter id="kuroGlow">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="4" />
+          </filter>
+          <filter id="kuroDistort">
+            <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="3" seed="${seed}" result="turbulence" />
+            <feDisplacementMap in="SourceGraphic" in2="turbulence" scale="6" xChannelSelector="R" yChannelSelector="G" />
+          </filter>
+        </defs>
+      `;
+      
+      let kuroContent = kuroDefs;
+      kuroContent += `<rect width="${width}" height="${height}" fill="#000000" />`;
+
+      const paths = [];
+      const maxDepth = 7;
+      
+      function generateBranch(x, y, direction, length, depth) {
+        if (depth > maxDepth || length < 10) {
+          return;
+        }
+
+        let endX = x;
+        let endY = y;
+
+        switch (direction) {
+          case 'up':    endY -= length; break;
+          case 'down':  endY += length; break;
+          case 'left':  endX -= length; break;
+          case 'right': endX += length; break;
+        }
+
+        paths.push(`M${x},${y} L${endX},${endY}`);
+
+        // 확률적으로 새로운 가지 생성
+        if (Math.random() > 0.4) {
+          const newDirections = (direction === 'up' || direction === 'down') ? ['left', 'right'] : ['up', 'down'];
+          const newLength = length * (Math.random() * 0.3 + 0.6); // 60% ~ 90%
+          
+          if (Math.random() > 0.3) {
+             generateBranch(endX, endY, newDirections[0], newLength, depth + 1);
+          }
+          if (Math.random() > 0.3) {
+             generateBranch(endX, endY, newDirections[1], newLength, depth + 1);
+          }
+        }
+      }
+
+      // 여러 시작점에서 가지 생성
+      for(let i = 0; i < 5; i++) {
+        const startX = Math.random() * width;
+        generateBranch(startX, height, 'up', Math.random() * 80 + 50, 0);
+      }
+      for(let i = 0; i < 3; i++) {
+        const startY = Math.random() * height;
+        generateBranch(width, startY, 'left', Math.random() * 80 + 50, 0);
+      }
+
+      const pathData = paths.join(' ');
+      
+      // 1. 외부 글로우 라인 (넓고, 흐릿하고, 어두운 보라색)
+      kuroContent += `<path d="${pathData}" stroke="#8a2be2" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.6" filter="url(#kuroGlow)" />`;
+      // 2. 내부 네온 라인 (얇고, 울렁이고, 밝은 보라색)
+      kuroContent += `<path d="${pathData}" stroke="#e6c8ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" filter="url(#kuroDistort)" />`;
+
+      return kuroContent;
+    // --- [추가 끝] ---
+
     case 'stars':
       const galaxyDefs = `
         <defs>
@@ -104,7 +175,6 @@ function generateBackgroundSVG(bgType, width, height) {
 
       return starsContent;
     
-    // --- [수정된 부분 시작] ---
     case 'matrix':
       const english = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
       const numbers = '0123456789';
@@ -117,7 +187,6 @@ function generateBackgroundSVG(bgType, width, height) {
       const columns = Math.floor(width / columnWidth);
       let matrixContent = '';
 
-      // 'leadingGlow' 필터 정의를 제거하고 'matrixGlow'만 남김
       const matrixDefs = `<defs><filter id="matrixGlow"><feGaussianBlur in="SourceGraphic" stdDeviation="1.0" result="blur" /></filter></defs>`;
       matrixContent += matrixDefs;
       matrixContent += `<rect width="${width}" height="${height}" fill="#000000" />`;
@@ -137,28 +206,23 @@ function generateBackgroundSVG(bgType, width, height) {
           const y = startY + j * matrixFontSize;
           if (y < 0 || y > height) continue;
           
-          // 선두 글자 구분 로직 제거, 모든 글자 색상 통일
           const color = '#00e030'; 
           const opacity = 0.1 + (j / streamLength) * 0.9;
           const posAttr = j === 0 ? `y="${startY}"` : `dy="1.2em"`;
 
           const tspan = `<tspan x="${x}" ${posAttr} fill="${color}" opacity="${opacity}">${escapeSVG(char)}</tspan>`;
           
-          // 모든 tspan을 하나의 배열에 추가
           streamTspans.push(tspan);
         }
         
-        // 하나의 <text> 요소로 모든 글자를 렌더링
         if (streamTspans.length > 0) {
           matrixContent += `<text font-family="monospace" font-size="${matrixFontSize}px" filter="url(#matrixGlow)">${streamTspans.join('')}</text>`;
         }
       }
       return matrixContent;
-    // --- [수정된 부분 끝] ---
-
+      
     case 'default':
     default:
-      // 단순 검은색 배경
       return `<rect width="${width}" height="${height}" fill="#000000" />`;
   }
 }
