@@ -33,57 +33,65 @@ function generateBackgroundSVG(bgType, width, height) {
             <stop offset="0%" stop-color="#F0E68C" stop-opacity="0.15" />
             <stop offset="100%" stop-color="#F0E68C" stop-opacity="0" />
           </radialGradient>
+           <radialGradient id="dustLane" cx="50%" cy="50%" r="50%">
+            <stop offset="20%" stop-color="#000000" stop-opacity="0.4" />
+            <stop offset="100%" stop-color="#000000" stop-opacity="0" />
+          </radialGradient>
           <filter id="brightStarGlow">
-            <feGaussianBlur stdDeviation="1.5" />
+            <feGaussianBlur stdDeviation="2.0" />
           </filter>
         </defs>
       `;
       starsContent += defs;
-      starsContent += `<rect width="${width}" height="${height}" fill="#000000" />`;
+      starsContent += `<rect width="${width}" height="${height}" fill="#010203" />`;
 
-      for (let i = 0; i < 15; i++) {
+      // [개선] 유기적인 성운 집합 그리기
+      for (let i = 0; i < 25; i++) {
         const cx = width * 0.2 + Math.random() * width * 0.6;
         const cy = height * 0.3 + Math.random() * height * 0.4;
-        const rx = width * 0.1 + Math.random() * width * 0.2;
+        const rx = width * 0.1 + Math.random() * width * 0.25;
         const ry = height * 0.05 + Math.random() * height * 0.1;
-        const opacity = Math.random() * 0.5 + 0.2;
+        const opacity = Math.random() * 0.5 + 0.3;
         const rotation = Math.random() * 180;
-        const fill = Math.random() > 0.5 ? 'url(#cloud1)' : 'url(#cloud2)';
+        const fill = Math.random() > 0.4 ? 'url(#cloud1)' : 'url(#cloud2)';
         starsContent += `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="${fill}" opacity="${opacity}" transform="rotate(${rotation} ${cx} ${cy})" />`;
       }
+      // [개선] 암흑 성운(먼지) 겹치기
+       starsContent += `<ellipse cx="${width/2}" cy="${height/2}" rx="${width*0.4}" ry="${height*0.2}" fill="url(#dustLane)" opacity="0.8" transform="rotate(70 ${width/2} ${height/2})" />`;
       
-      for (let i = 0; i < 2000; i++) {
+      // [개선] 별 다층 구조 생성
+      for (let i = 0; i < 1500; i++) {
         const x = Math.random() * width;
-        const y = height * 0.2 + Math.random() * height * 0.6;
-        const r = Math.random() * 0.4;
-        const opacity = Math.random() * 0.5 + 0.1;
-        starsContent += `<circle cx="${x}" cy="${y}" r="${r}" fill="#ffffff" opacity="${opacity}" />`;
+        const y = height * 0.15 + Math.random() * height * 0.7;
+        const r = Math.random() * 0.35;
+        const opacity = Math.random() * 0.6 + 0.1;
+        starsContent += `<circle cx="${x}" cy="${y}" r="${r}" fill="#fff" opacity="${opacity}" />`;
       }
-      for (let i = 0; i < 300; i++) {
+      for (let i = 0; i < 250; i++) {
         const x = Math.random() * width;
         const y = Math.random() * height;
-        const r = Math.random() * 0.8 + 0.2;
+        const r = Math.random() * 0.7 + 0.2;
         const opacity = Math.random() * 0.7 + 0.3;
         starsContent += `<circle cx="${x}" cy="${y}" r="${r}" fill="#f0f8ff" opacity="${opacity}" />`;
       }
-      for (let i = 0; i < 10; i++) {
+      for (let i = 0; i < 15; i++) {
         const x = Math.random() * width;
         const y = Math.random() * height;
-        const r = Math.random() * 1.5 + 0.8;
+        const r = Math.random() * 1.2 + 0.8;
         const colorRoll = Math.random();
         let color = '#ffffff';
-        if (colorRoll > 0.9) color = '#ffccaa';
-        else if (colorRoll > 0.8) color = '#aaccff';
+        if (colorRoll > 0.85) color = '#ffdac7';
+        else if (colorRoll > 0.7) color = '#c7fdff';
         starsContent += `<circle cx="${x}" cy="${y}" r="${r}" fill="${color}" filter="url(#brightStarGlow)" />`;
       }
-      for (let i = 0; i < (Math.random() > 0.5 ? 1 : 2); i++) {
+      for (let i = 0; i < (Math.random() > 0.4 ? 1 : 2); i++) {
         const x1 = Math.random() * width;
         const y1 = Math.random() * height;
-        const length = Math.random() * 200 + 100;
+        const length = Math.random() * 250 + 150;
         const angle = Math.random() * 360;
         const x2 = x1 + length * Math.cos(angle * Math.PI / 180);
         const y2 = y1 + length * Math.sin(angle * Math.PI / 180);
-        starsContent += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#ffffff" stroke-width="1" stroke-opacity="0.4" />`;
+        starsContent += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#ffffff" stroke-width="0.8" stroke-opacity="0.3" />`;
       }
 
       return starsContent;
@@ -100,7 +108,8 @@ function generateBackgroundSVG(bgType, width, height) {
       const columns = Math.floor(width / columnWidth);
       let matrixContent = '';
 
-      const matrixDefs = `<defs><filter id="matrixGlow"><feGaussianBlur in="SourceGraphic" stdDeviation="0.5" result="blur" /></filter><filter id="leadingGlow"><feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="blur" /></filter></defs>`;
+      // [개선] 블러 효과 강화
+      const matrixDefs = `<defs><filter id="matrixGlow"><feGaussianBlur in="SourceGraphic" stdDeviation="1.0" result="blur" /></filter><filter id="leadingGlow"><feGaussianBlur in="SourceGraphic" stdDeviation="2.0" result="blur" /></filter></defs>`;
       matrixContent += matrixDefs;
       matrixContent += `<rect width="${width}" height="${height}" fill="#000000" />`;
 
@@ -130,7 +139,7 @@ function generateBackgroundSVG(bgType, width, height) {
       const defaultDefs = `<defs><linearGradient id="defaultSky" x1="50%" y1="0%" x2="50%" y2="100%"><stop offset="0%" stop-color="#0d1b2a" /><stop offset="100%" stop-color="#1b263b" /></linearGradient></defs>`;
       defaultContent += defaultDefs;
       defaultContent += `<rect width="${width}" height="${height}" fill="url(#defaultSky)" />`;
-      const defaultStarCount = 200; // 너비가 줄었으므로 별 개수 소폭 조정
+      const defaultStarCount = 200;
       for (let i = 0; i < defaultStarCount; i++) {
         const x = Math.random() * width;
         const y = Math.random() * height;
@@ -144,7 +153,7 @@ function generateBackgroundSVG(bgType, width, height) {
 
 // --- 상수 ---
 const constants = {
-  width: 800, // [수정] 너비를 800px로 변경
+  width: 800,
   paddingX: 40,
   paddingY: 60,
   lineHeight: 1.6,
@@ -154,11 +163,11 @@ const constants = {
 exports.handler = async function(event) {
   try {
     const defaultParams = {
-      text: '너비가 800px로 설정되었습니다.|{동적} SVG 생성기',
+      text: '더욱 사실적으로 개선된 {은하수}와 {블러} 효과가 적용된 매트릭스.',
       textColor: '#ffffff',
       fontSize: 16,
       align: 'left',
-      bg: 'default',
+      bg: 'stars',
     };
     const queryParams = event.queryStringParameters || {};
     const params = { ...defaultParams, ...queryParams };
