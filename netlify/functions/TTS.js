@@ -45,44 +45,56 @@ function generateBackgroundSVG(bgType, width, height) {
         </defs>
       `;
       starsContent += defs;
+      
+      // [1단계] 배경 그라데이션
       starsContent += `<rect width="${width}" height="${height}" fill="url(#bgGradient)" />`;
+      
+      // [2단계] 중심 은하수 빛
       starsContent += `<ellipse cx="${width / 2}" cy="${height / 2}" rx="${width * 0.7}" ry="${height * 0.2}" fill="url(#nebulaGradient)" transform="rotate(-45 ${width / 2} ${height / 2})" />`;
 
+      // [3단계] 별 뿌리기
       const starCount = 400;
       const nebulaCenterX = width / 2;
       const nebulaCenterY = height / 2;
-      const rotationAngle = -45 * Math.PI / 180;
+      const rotationAngle = -45 * Math.PI / 180; // 은하수 회전 각도 (라디안)
 
       for (let i = 0; i < starCount; i++) {
         const x = Math.random() * width;
         const y = Math.random() * height;
+        
+        // 별의 좌표를 은하수 각도에 맞춰 회전시켜 거리를 계산
         const rotatedX = Math.cos(-rotationAngle) * (x - nebulaCenterX) - Math.sin(-rotationAngle) * (y - nebulaCenterY) + nebulaCenterX;
         const rotatedY = Math.sin(-rotationAngle) * (x - nebulaCenterX) + Math.cos(-rotationAngle) * (y - nebulaCenterY) + nebulaCenterY;
         const dist = Math.abs(rotatedY - nebulaCenterY);
+        
+        // 은하수 띠 중심에 가까울수록 별이 나타날 확률 증가
         const spawnProb = Math.pow(Math.max(0, 1 - dist / (height * 0.3)), 2);
 
-        if (Math.random() < spawnProb) {
+        if (Math.random() < spawnProb) { // 밀집된 별
           const r = Math.random() * 1.5 + 0.2;
           const opacity = Math.random() * 0.5 + 0.5;
           starsContent += `<circle cx="${x}" cy="${y}" r="${r}" fill="#fff" opacity="${opacity}" />`;
-        } else if (Math.random() < 0.2) {
+        } else if (Math.random() < 0.2) { // 흩어진 별
           const r = Math.random() * 0.8 + 0.1;
           const opacity = Math.random() * 0.6 + 0.2;
           starsContent += `<circle cx="${x}" cy="${y}" r="${r}" fill="#fff" opacity="${opacity}" />`;
         }
       }
+      // 빛나는 별
       for(let i=0; i<10; i++) {
         const x = Math.random() * width;
         const y = Math.random() * height;
         const r = Math.random() * 1.5 + 1;
         starsContent += `<circle cx="${x}" cy="${y}" r="${r}" fill="#aaddff" filter="url(#starGlow)" />`;
       }
+      
+      // [4단계] 유성우 추가
       const meteorCount = Math.floor(Math.random() * 3) + 2;
       for(let i=0; i < meteorCount; i++) {
           const startX = Math.random() * width;
           const startY = Math.random() * height;
           const length = Math.random() * 150 + 50;
-          const angle = (Math.random() - 0.5) * 80 - 45;
+          const angle = (Math.random() - 0.5) * 80 - 45; // 은하수와 비슷한 각도로 떨어지도록
           const transform = `rotate(${angle} ${startX} ${startY})`;
           starsContent += `<line x1="${startX}" y1="${startY}" x2="${startX + length}" y2="${startY}" stroke="url(#meteorGradient)" stroke-width="2" transform="${transform}" />`
       }
@@ -92,7 +104,7 @@ function generateBackgroundSVG(bgType, width, height) {
       const english = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
       const numbers = '0123456789';
       const japanese = 'アイウエオカキクケコサシスセソタチツテトナニヌネノ';
-      const hangul = 'ㅂㅈㄷㄱㅅㅁㄴㅇㄹㅎㅋㅌㅊㅍㅛㅕㅑㅐㅔㅗㅓㅏㅣㅠㅜㅡ';
+      const hangul = '가나다라마바사아자차카타파하';
       const symbols = '-=/<>+*&%$#@!';
       const matrixChars = english.repeat(5) + numbers.repeat(2) + hangul + japanese + symbols;
       const matrixFontSize = 18;
@@ -154,7 +166,7 @@ const constants = {
 exports.handler = async function(event) {
   try {
     const defaultParams = {
-      text: '스타일이 적용된 {은하수} 배경입니다.|유성우가 떨어집니다.',
+      text: '몽환적인 스타일의 {은하수} 배경입니다.|유성우가 떨어집니다.',
       textColor: '#ffffff',
       fontSize: 16,
       align: 'left',
@@ -219,4 +231,4 @@ exports.handler = async function(event) {
     const errorSvg = `<svg width="400" height="200" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="#f8d7da" /><text x="10" y="50%" font-family="monospace" font-size="16" fill="#721c24" dominant-baseline="middle">Error: ${escapeSVG(err.message)}</text></svg>`;
     return { statusCode: 500, headers: { 'Content-Type': 'image/svg+xml' }, body: errorSvg.trim() };
   }
-};
+};```
