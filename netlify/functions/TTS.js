@@ -19,12 +19,65 @@ function parseBoldText(line) {
   }).join('');
 }
 
-// --- SVG 배경 생성 함수 ---
+// --- SVG 배경 생성 함수 (kuro 스타일 추가) ---
 
 function generateBackgroundSVG(bgType, width, height) {
   const seed = Math.floor(Math.random() * 1000);
   
   switch (bgType) {
+    case 'kuro':
+      const kuroDefs = `
+        <defs>
+          <filter id="kuro-effect" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="7" result="glow-outer-blur" />
+            <feFlood flood-color="#6a0dad" result="glow-color" />
+            <feComposite in="glow-color" in2="glow-outer-blur" operator="in" result="glow-outer" />
+            <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="glow-inner" />
+            <feTurbulence type="fractalNoise" baseFrequency="0.04 0.5" numOctaves="2" seed="${seed}" result="turbulence"/>
+            <feComposite operator="in" in="turbulence" in2="SourceGraphic"/>
+            <feColorMatrix type="matrix" values="1 0 0 0 0
+                                                 0 1 0 0 0
+                                                 0 0 10 0 0
+                                                 0 0 0 1.5 -0.2" result="plasma-texture" />
+            <feMerge>
+              <feMergeNode in="glow-outer" />
+              <feMergeNode in="plasma-texture" />
+              <feMergeNode in="glow-inner" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+      `;
+
+      let pathData = '';
+      const step = 40;
+      const padding = 20;
+      let x = (Math.random() < 0.5) ? padding : width - padding;
+      let y = Math.floor(Math.random() * (height - padding * 2)) + padding;
+      pathData += `M ${x} ${y}`;
+      let lastWasHorizontal = Math.random() < 0.5;
+      const numSegments = 35;
+
+      for (let i = 0; i < numSegments; i++) {
+        const length = (Math.floor(Math.random() * 4) + 1) * step;
+        if (lastWasHorizontal) {
+          let newY = y + (Math.random() < 0.5 ? -length : length);
+          y = Math.max(padding, Math.min(height - padding, newY));
+          pathData += ` V ${y}`;
+        } else {
+          let newX = x + (Math.random() < 0.5 ? -length : length);
+          x = Math.max(padding, Math.min(width - padding, newX));
+          pathData += ` H ${x}`;
+        }
+        lastWasHorizontal = !lastWasHorizontal;
+      }
+
+      let kuroContent = `<rect width="${width}" height="${height}" fill="#000000" />`;
+      kuroContent += kuroDefs;
+      kuroContent += `<path d="${pathData}" fill="none" stroke="#e1d5ff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" filter="url(#kuro-effect)" />`;
+      
+      return kuroContent;
+
     case 'stars':
       const galaxyDefs = `
         <defs>
