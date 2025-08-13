@@ -10,21 +10,21 @@ function escapeSVG(str) {
 }
 
 function parseBoldText(line) {
-  // [개선] 입력값이 문자열이 아닐 경우를 대비한 방어 코드 추가
   if (typeof line !== 'string') return '';
   const parts = line.split(/\{([^}]+)\}/g).filter(part => part);
   return parts.map((part, index) => {
     const isBold = index % 2 === 1;
-    return isBold ? `<tspan font-weight="700">${part}</tspan>` : `<tspan>${part}</tspan>`;
+    // [버그 수정] 각 텍스트 조각을 SVG에 넣기 전에 반드시 이스케이프 처리
+    const escapedPart = escapeSVG(part);
+    return isBold ? `<tspan font-weight="700">${escapedPart}</tspan>` : `<tspan>${escapedPart}</tspan>`;
   }).join('');
 }
 
-// --- SVG 배경 생성 함수 ---
+// --- SVG 배경 생성 함수 (이전과 동일, 성능 개선 유지) ---
 
 function generateBackgroundSVG(bgType, width, height) {
   switch (bgType) {
     case 'stars':
-      // [개선] 가독성 및 유지보수성 향상을 위해 매직 넘버를 상수로 정의
       const GALAXY_ROTATION = -35;
       const GALAXY_BASE_RX_SCALE = 0.8;
       const GALAXY_BASE_RY_SCALE = 0.4;
@@ -67,8 +67,9 @@ function generateBackgroundSVG(bgType, width, height) {
       
       const rotationStr = `rotate(${GALAXY_ROTATION} ${width / 2} ${height / 2})`;
       
-      starsContent += `<ellipse cx="${width / 2}" cy="${height / 2}" rx="${width * GALAXY_BASE_RX_SCALE}" ry="${height * GALAXY_BASE_RY_SCALE}" fill="url(#galaxyBaseGlow)" transform="${rotationStr}" />`;
-      starsContent += `<ellipse cx="${width / 2}" cy="${height / 2}" rx="${width * GALAXY_CORE_RX_SCALE}" ry="${height * GALAXY_CORE_RY_SCALE}" fill="url(#galaxyCoreGlow)" transform="${rotationStr}" />`;
+      starsContent += `<g transform="${rotationStr}">`;
+      starsContent += `<ellipse cx="${width / 2}" cy="${height / 2}" rx="${width * GALAXY_BASE_RX_SCALE}" ry="${height * GALAXY_BASE_RY_SCALE}" fill="url(#galaxyBaseGlow)" />`;
+      starsContent += `<ellipse cx="${width / 2}" cy="${height / 2}" rx="${width * GALAXY_CORE_RX_SCALE}" ry="${height * GALAXY_CORE_RY_SCALE}" fill="url(#galaxyCoreGlow)" />`;
       
       let stardustPathData = '';
       const bandWidth = height * STARDUST_BAND_SCALE;
@@ -78,14 +79,11 @@ function generateBackgroundSVG(bgType, width, height) {
         const y_dist = (Math.random() - 0.5) * bandWidth;
         const x = width / 2 + Math.cos(angle) * radius;
         const y = height / 2 + Math.sin(angle) * radius + y_dist;
-        
-        const rotatedX = width / 2 + Math.cos(GALAXY_ROTATION * Math.PI/180) * (x - width/2) - Math.sin(GALAXY_ROTATION * Math.PI/180) * (y - height/2);
-        const rotatedY = height / 2 + Math.sin(GALAXY_ROTATION * Math.PI/180) * (x - width/2) + Math.cos(GALAXY_ROTATION * Math.PI/180) * (y - height/2);
-
-        stardustPathData += `M${rotatedX.toFixed(2)},${rotatedY.toFixed(2)}h0`;
+        stardustPathData += `M${x.toFixed(2)},${y.toFixed(2)}h0`;
       }
       starsContent += `<path d="${stardustPathData}" stroke="#fff" stroke-width="0.6" opacity="0.6" fill="none" />`;
-      
+      starsContent += `</g>`;
+
       for (let i = 0; i < SMALL_STAR_COUNT; i++) {
         starsContent += `<circle cx="${Math.random() * width}" cy="${Math.random() * height}" r="${Math.random() * 0.8 + 0.1}" fill="#fff" opacity="${Math.random() * 0.5 + 0.2}" />`;
       }
@@ -117,7 +115,6 @@ function generateBackgroundSVG(bgType, width, height) {
       const columns = Math.floor(width / columnWidth);
       let matrixContent = '';
 
-      // [개선] 선두 문자를 위한 leadingGlow 필터 추가
       const matrixDefs = `<defs><filter id="matrixGlow"><feGaussianBlur in="SourceGraphic" stdDeviation="1.0" result="blur" /></filter><filter id="leadingGlow"><feGaussianBlur in="SourceGraphic" stdDeviation="2.0" result="blur" /></filter></defs>`;
       matrixContent += matrixDefs;
       matrixContent += `<rect width="${width}" height="${height}" fill="#000000" />`;
@@ -129,8 +126,8 @@ function generateBackgroundSVG(bgType, width, height) {
         const startY = Math.random() * height * 1.5 - height * 0.5;
         const streamLength = Math.floor(Math.random() * (height / matrixFontSize * 0.8)) + 10;
         
-        let streamTspans = '';
-        let leadingCharTspan = ''; // [개선] 선두 문자를 별도로 관리
+        const streamTspans = [];
+        let leadingCharTspan = '';
 
         for (let j = 0; j < streamLength; j++) {
           const charIndex = Math.floor(Math.random() * matrixChars.length);
@@ -148,13 +145,12 @@ function generateBackgroundSVG(bgType, width, height) {
           if (isLeading) {
             leadingCharTspan = tspan;
           } else {
-            streamTspans += tspan;
+            streamTspans.push(tspan);
           }
         }
         
-        // [개선] 일반 문자와 선두 문자를 분리하여 렌더링하고, 선두 문자에 다른 필터 적용
-        if (streamTspans) {
-          matrixContent += `<text font-family="monospace" font-size="${matrixFontSize}px" filter="url(#matrixGlow)">${streamTspans}</text>`;
+        if (streamTspans.length > 0) {
+          matrixContent += `<text font-family="monospace" font-size="${matrixFontSize}px" filter="url(#matrixGlow)">${streamTspans.join('')}</text>`;
         }
         if (leadingCharTspan) {
           matrixContent += `<text font-family="monospace" font-size="${matrixFontSize}px" filter="url(#leadingGlow)">${leadingCharTspan}</text>`;
@@ -192,7 +188,7 @@ const constants = {
 exports.handler = async function(event) {
   try {
     const defaultParams = {
-      text: '대역폭이 최적화된 {은하수} 배경입니다.',
+      text: 'This is a {Dynamic} SVG.|Special Chars: < & >', // 기본값 복원 및 특수문자 예시
       textColor: '#ffffff',
       fontSize: 16,
       align: 'left',
@@ -212,7 +208,9 @@ exports.handler = async function(event) {
     }
 
     const rawText = params.text;
-    const lines = escapeSVG(rawText).split('|');
+    // [버그 수정] escapeSVG를 여기서 호출하면 안 됨. 원시 텍스트를 그대로 사용.
+    const lines = rawText.split('|');
+    
     const totalTextBlockHeight = (lines.length - 1) * (constants.lineHeight * fontSize) + fontSize;
     const height = Math.round(totalTextBlockHeight + (constants.paddingY * 2));
     
@@ -221,6 +219,7 @@ exports.handler = async function(event) {
     const startY = Math.round((height / 2) - (totalTextBlockHeight / 2) + (fontSize * 0.8));
 
     const textElements = lines.map((line, index) => {
+      // [핵심 수정] parseBoldText가 내부적으로 이스케이프를 처리함
       const innerContent = parseBoldText(line);
       const dy = index === 0 ? '0' : `${constants.lineHeight}em`;
       return `<tspan x="${x}" dy="${dy}">${innerContent}</tspan>`;
