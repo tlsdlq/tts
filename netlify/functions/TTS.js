@@ -19,7 +19,7 @@ function parseBoldText(line) {
   }).join('');
 }
 
-// --- SVG 배경 생성 함수 (kuro 스타일 수정) ---
+// --- SVG 배경 생성 함수 (kuro 스타일 재설계) ---
 
 function generateBackgroundSVG(bgType, width, height) {
   const seed = Math.floor(Math.random() * 1000);
@@ -29,54 +29,54 @@ function generateBackgroundSVG(bgType, width, height) {
       const kuroDefs = `
         <defs>
           <filter id="kuro-effect" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="glow-outer-blur" />
-            <feFlood flood-color="#a391ff" result="glow-color" />
-            <feComposite in="glow-color" in2="glow-outer-blur" operator="in" result="glow-outer" />
-            <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="glow-inner" />
+            <!-- 1. 넓게 퍼지는 보라색 외부 광선 (Halo) -->
+            <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="glow-blur" />
+            <feFlood flood-color="#7b42f5" result="glow-color"/>
+            <feComposite in="glow-color" in2="glow-blur" operator="in" result="glow-outer"/>
+            
+            <!-- 2. 미세한 붉은색 색수차 효과 (Chromatic Aberration) -->
+            <feOffset in="SourceGraphic" dx="1.5" dy="1.5" result="offset-source" />
+            <feGaussianBlur in="offset-source" stdDeviation="5" result="glow-blur-red" />
+            <feFlood flood-color="#ff3131" flood-opacity="0.5" result="glow-color-red"/>
+            <feComposite in="glow-color-red" in2="glow-blur-red" operator="in" result="glow-red-edge"/>
+            
+            <!-- 3. 선 내부의 전기 질감 (Plasma Texture) -->
+            <feTurbulence type="fractalNoise" baseFrequency="0.03 0.4" numOctaves="2" seed="${seed}" result="turbulence"/>
+            <feComposite operator="in" in="turbulence" in2="SourceGraphic"/>
+            <feColorMatrix type="matrix" values="1 0 0 0 0
+                                                 0 1 0 0 0
+                                                 0 0 10 0 0
+                                                 0 0 0 1.2 -0.1" result="plasma-texture" />
+            
+            <!-- 4. 모든 레이어 병합 -->
             <feMerge>
               <feMergeNode in="glow-outer" />
-              <feMergeNode in="glow-inner" />
-              <feMergeNode in="SourceGraphic" />
+              <feMergeNode in="glow-red-edge" />
+              <feMergeNode in="plasma-texture" />
+              <feMergeNode in="SourceGraphic" /> 
             </feMerge>
           </filter>
         </defs>
       `;
-
-      // --- 수정된 경로 생성 로직 ---
+      
       let kuroContent = `<rect width="${width}" height="${height}" fill="#000000" />`;
       kuroContent += kuroDefs;
 
-      const numPaths = Math.floor(width / 200); // 너비에 비례하여 경로 수 결정 (약 3-4개)
-      const step = 40;
-      const padding = 20;
-
-      for (let p = 0; p < numPaths; p++) {
-        // 각 경로를 이미지 전체 영역 내의 임의의 위치에서 시작
-        let x = Math.floor(Math.random() * (width - padding * 2)) + padding;
-        let y = Math.floor(Math.random() * (height - padding * 2)) + padding;
-        
-        let pathData = `M ${x} ${y}`;
-        let lastWasHorizontal = Math.random() < 0.5;
-        // 각 경로의 길이를 무작위로 설정
-        const numSegments = Math.floor(Math.random() * 10) + 10; 
-
-        for (let i = 0; i < numSegments; i++) {
-          const length = (Math.floor(Math.random() * 3) + 1) * step;
-          if (lastWasHorizontal) {
-            let newY = y + (Math.random() < 0.5 ? -length : length);
-            y = Math.max(padding, Math.min(height - padding, newY));
-            pathData += ` V ${y}`;
-          } else {
-            let newX = x + (Math.random() < 0.5 ? -length : length);
-            x = Math.max(padding, Math.min(width - padding, newX));
-            pathData += ` H ${x}`;
+      // --- 격자 기반 경로 생성 로직 ---
+      const gridSize = 45;
+      let pathData = '';
+      for (let y = gridSize; y < height - gridSize; y += gridSize) {
+          for (let x = gridSize; x < width - gridSize; x += gridSize) {
+              if (Math.random() > 0.4) { // 60% 확률로 가로선 생성
+                  pathData += ` M ${x} ${y} h ${gridSize}`;
+              }
+              if (Math.random() > 0.4) { // 60% 확률로 세로선 생성
+                  pathData += ` M ${x} ${y} v ${gridSize}`;
+              }
           }
-          lastWasHorizontal = !lastWasHorizontal;
-        }
-        
-        // 생성된 경로를 SVG에 추가
-        kuroContent += `<path d="${pathData}" fill="none" stroke="#e9e3ff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" filter="url(#kuro-effect)" />`;
       }
+      
+      kuroContent += `<path d="${pathData}" fill="none" stroke="#e9e3ff" stroke-width="8" stroke-linecap="round" filter="url(#kuro-effect)" />`;
       
       return kuroContent;
 
