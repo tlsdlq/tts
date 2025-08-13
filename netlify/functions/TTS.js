@@ -10,6 +10,8 @@ function escapeSVG(str) {
 }
 
 function parseBoldText(line) {
+  // [개선] 입력값이 문자열이 아닐 경우를 대비한 방어 코드 추가
+  if (typeof line !== 'string') return '';
   const parts = line.split(/\{([^}]+)\}/g).filter(part => part);
   return parts.map((part, index) => {
     const isBold = index % 2 === 1;
@@ -22,56 +24,84 @@ function parseBoldText(line) {
 function generateBackgroundSVG(bgType, width, height) {
   switch (bgType) {
     case 'stars':
+      // [개선] 가독성 및 유지보수성 향상을 위해 매직 넘버를 상수로 정의
+      const GALAXY_ROTATION = -35;
+      const GALAXY_BASE_RX_SCALE = 0.8;
+      const GALAXY_BASE_RY_SCALE = 0.4;
+      const GALAXY_CORE_RX_SCALE = 0.6;
+      const GALAXY_CORE_RY_SCALE = 0.15;
+      const STARDUST_BAND_SCALE = 0.3;
+      const STARDUST_COUNT = 1500;
+      const SMALL_STAR_COUNT = 150;
+      const GLOWING_STAR_COUNT = 15;
+      const MIN_METEOR_COUNT = 2;
+      const MAX_METEOR_COUNT = 4;
+
       let starsContent = '';
       const defs = `
         <defs>
-          <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#1e1a3d" />
-            <stop offset="100%" stop-color="#0c0d24" />
-          </linearGradient>
-          <radialGradient id="nebulaColors" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stop-color="#d4b8ff" stop-opacity="1" />
-            <stop offset="40%" stop-color="#70a0ff" stop-opacity="0.8" />
-            <stop offset="100%" stop-color="#3b76a8" stop-opacity="0.3" />
+          <radialGradient id="deepSpace" cx="50%" cy="50%" r="70%">
+            <stop offset="0%" stop-color="#2a0d45" />
+            <stop offset="100%" stop-color="#000" />
+          </radialGradient>
+          <radialGradient id="galaxyBaseGlow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#4b0082" stop-opacity="0.5" />
+            <stop offset="100%" stop-color="#4b0082" stop-opacity="0" />
+          </radialGradient>
+          <radialGradient id="galaxyCoreGlow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#8ec5ff" stop-opacity="0.6" />
+            <stop offset="100%" stop-color="#8ec5ff" stop-opacity="0" />
           </radialGradient>
           <linearGradient id="meteorGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stop-color="rgba(255,255,255,0)" />
-            <stop offset="70%" stop-color="rgba(170,220,255,0.8)" />
-            <stop offset="100%" stop-color="rgba(255,255,255,1)" />
+            <stop offset="0%" stop-color="rgba(200, 225, 255, 0)" />
+            <stop offset="50%" stop-color="rgba(200, 225, 255, 0.8)" />
+            <stop offset="100%" stop-color="#fff" />
           </linearGradient>
           <filter id="starGlow">
-            <feGaussianBlur stdDeviation="1.5" />
-          </filter>
-          <filter id="nebulaFilter" x="-50%" y="-50%" width="200%" height="200%">
-            <feTurbulence type="fractalNoise" baseFrequency="0.02 0.05" numOctaves="2" seed="${Math.floor(Math.random() * 10)}" result="turbulence" />
-            <feDisplacementMap in="SourceGraphic" in2="turbulence" scale="120" />
+            <feGaussianBlur stdDeviation="1.8" />
           </filter>
         </defs>
       `;
       starsContent += defs;
+      starsContent += `<rect width="${width}" height="${height}" fill="url(#deepSpace)" />`;
       
-      starsContent += `<rect width="${width}" height="${height}" fill="url(#bgGradient)" />`;
-      starsContent += `<g filter="url(#nebulaFilter)">
-        <rect width="${width}" height="${height}" fill="url(#nebulaColors)" opacity="0.6" />
-      </g>`;
+      const rotationStr = `rotate(${GALAXY_ROTATION} ${width / 2} ${height / 2})`;
       
-      for (let i = 0; i < 350; i++) {
-        starsContent += `<circle cx="${Math.random() * width}" cy="${Math.random() * height}" r="${Math.random() * 0.8 + 0.1}" fill="#fff" opacity="${Math.random() * 0.7 + 0.2}" />`;
+      starsContent += `<ellipse cx="${width / 2}" cy="${height / 2}" rx="${width * GALAXY_BASE_RX_SCALE}" ry="${height * GALAXY_BASE_RY_SCALE}" fill="url(#galaxyBaseGlow)" transform="${rotationStr}" />`;
+      starsContent += `<ellipse cx="${width / 2}" cy="${height / 2}" rx="${width * GALAXY_CORE_RX_SCALE}" ry="${height * GALAXY_CORE_RY_SCALE}" fill="url(#galaxyCoreGlow)" transform="${rotationStr}" />`;
+      
+      let stardustPathData = '';
+      const bandWidth = height * STARDUST_BAND_SCALE;
+      for (let i = 0; i < STARDUST_COUNT; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const radius = Math.random() * width * 0.5;
+        const y_dist = (Math.random() - 0.5) * bandWidth;
+        const x = width / 2 + Math.cos(angle) * radius;
+        const y = height / 2 + Math.sin(angle) * radius + y_dist;
+        
+        const rotatedX = width / 2 + Math.cos(GALAXY_ROTATION * Math.PI/180) * (x - width/2) - Math.sin(GALAXY_ROTATION * Math.PI/180) * (y - height/2);
+        const rotatedY = height / 2 + Math.sin(GALAXY_ROTATION * Math.PI/180) * (x - width/2) + Math.cos(GALAXY_ROTATION * Math.PI/180) * (y - height/2);
+
+        stardustPathData += `M${rotatedX.toFixed(2)},${rotatedY.toFixed(2)}h0`;
       }
-      for(let i=0; i<12; i++) {
-        const x = Math.random() * width;
-        const y = Math.random() * height;
-        const r = Math.random() * 1.5 + 0.8;
-        starsContent += `<circle cx="${x}" cy="${y}" r="${r}" fill="#d1e8ff" filter="url(#starGlow)" />`;
+      starsContent += `<path d="${stardustPathData}" stroke="#fff" stroke-width="0.6" opacity="0.6" fill="none" />`;
+      
+      for (let i = 0; i < SMALL_STAR_COUNT; i++) {
+        starsContent += `<circle cx="${Math.random() * width}" cy="${Math.random() * height}" r="${Math.random() * 0.8 + 0.1}" fill="#fff" opacity="${Math.random() * 0.5 + 0.2}" />`;
       }
-      const meteorCount = Math.floor(Math.random() * 3) + 2;
+      for (let i = 0; i < GLOWING_STAR_COUNT; i++) {
+        const r = Math.random() * 1.2 + 0.8;
+        starsContent += `<circle cx="${Math.random() * width}" cy="${height / 2 + (Math.random() - 0.5) * height * 0.8}" r="${r}" fill="#fff" filter="url(#starGlow)" opacity="${Math.random() * 0.5 + 0.5}" />`;
+      }
+      
+      const meteorCount = Math.floor(Math.random() * (MAX_METEOR_COUNT - MIN_METEOR_COUNT + 1)) + MIN_METEOR_COUNT;
       for(let i=0; i < meteorCount; i++) {
           const startX = Math.random() * width;
           const startY = Math.random() * height;
-          const length = Math.random() * 150 + 50;
-          const angle = (Math.random() - 0.5) * 80 - 45;
-          const transform = `rotate(${angle} ${startX} ${startY})`;
-          starsContent += `<line x1="${startX}" y1="${startY}" x2="${startX + length}" y2="${startY}" stroke="url(#meteorGradient)" stroke-width="2" transform="${transform}" />`
+          const length = Math.random() * 120 + 40;
+          const angle = (Math.random() - 0.5) * 60 + GALAXY_ROTATION;
+          const meteorTransform = `rotate(${angle} ${startX} ${startY})`;
+          starsContent += `<line x1="${startX}" y1="${startY}" x2="${startX + length}" y2="${startY}" stroke="url(#meteorGradient)" stroke-width="1.5" transform="${meteorTransform}" />`
       }
       return starsContent;
 
@@ -87,6 +117,7 @@ function generateBackgroundSVG(bgType, width, height) {
       const columns = Math.floor(width / columnWidth);
       let matrixContent = '';
 
+      // [개선] 선두 문자를 위한 leadingGlow 필터 추가
       const matrixDefs = `<defs><filter id="matrixGlow"><feGaussianBlur in="SourceGraphic" stdDeviation="1.0" result="blur" /></filter><filter id="leadingGlow"><feGaussianBlur in="SourceGraphic" stdDeviation="2.0" result="blur" /></filter></defs>`;
       matrixContent += matrixDefs;
       matrixContent += `<rect width="${width}" height="${height}" fill="#000000" />`;
@@ -99,20 +130,34 @@ function generateBackgroundSVG(bgType, width, height) {
         const streamLength = Math.floor(Math.random() * (height / matrixFontSize * 0.8)) + 10;
         
         let streamTspans = '';
+        let leadingCharTspan = ''; // [개선] 선두 문자를 별도로 관리
+
         for (let j = 0; j < streamLength; j++) {
           const charIndex = Math.floor(Math.random() * matrixChars.length);
           const char = matrixChars[charIndex];
           const y = startY + j * matrixFontSize;
           if (y < 0 || y > height) continue;
+          
           const isLeading = j === streamLength - 1;
           const color = isLeading ? '#c0ffc0' : '#00e030';
           const opacity = 0.1 + (j / streamLength) * 0.9;
           const posAttr = j === 0 ? `y="${startY}"` : `dy="1.2em"`;
-          streamTspans += `<tspan x="${x}" ${posAttr} fill="${color}" opacity="${opacity}">${escapeSVG(char)}</tspan>`;
+
+          const tspan = `<tspan x="${x}" ${posAttr} fill="${color}" opacity="${opacity}">${escapeSVG(char)}</tspan>`;
+          
+          if (isLeading) {
+            leadingCharTspan = tspan;
+          } else {
+            streamTspans += tspan;
+          }
         }
         
+        // [개선] 일반 문자와 선두 문자를 분리하여 렌더링하고, 선두 문자에 다른 필터 적용
         if (streamTspans) {
           matrixContent += `<text font-family="monospace" font-size="${matrixFontSize}px" filter="url(#matrixGlow)">${streamTspans}</text>`;
+        }
+        if (leadingCharTspan) {
+          matrixContent += `<text font-family="monospace" font-size="${matrixFontSize}px" filter="url(#leadingGlow)">${leadingCharTspan}</text>`;
         }
       }
       return matrixContent;
@@ -147,7 +192,7 @@ const constants = {
 exports.handler = async function(event) {
   try {
     const defaultParams = {
-      text: '몽환적인 스타일의 {은하수} 배경입니다.|SVG 필터를 사용하여 구름을 표현했습니다.',
+      text: '대역폭이 최적화된 {은하수} 배경입니다.',
       textColor: '#ffffff',
       fontSize: 16,
       align: 'left',
