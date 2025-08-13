@@ -111,13 +111,35 @@ function generateBackgroundSVG(bgType, width, height) {
       
       pathData = maze.join(' ');
       
-      // 메인 미로 패턴 (굵은 선)
+      // 메인 미로 패턴 (굵은 선) - 다양한 두께
       const strokeWidth = Math.max(4, 8 * scale);
-      kuroContent += `<path d="${pathData}" fill="none" stroke="#cc77ff" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round" filter="url(#strongGlow)" />`;
+      kuroContent += `<g stroke="#cc77ff" fill="none" filter="url(#strongGlow)">`;
       
-      // 밝은 코어 라인
+      // 각 패스마다 다른 두께 적용
+      const pathWidths = [7, 6, 8, 6, 5, 7, 6, 8, 7, 6, 5, 6, 7, 5, 4, 5, 6, 4, 5, 6, 4, 5, 4, 3, 4, 3, 4, 5, 8, 6, 4, 3];
+      const paths = pathData.split(' M').filter(p => p);
+      
+      paths.forEach((path, index) => {
+        const fullPath = index === 0 ? path : 'M' + path;
+        const width = Math.max(3, (pathWidths[index % pathWidths.length] || 5) * scale);
+        kuroContent += `<path d="${fullPath}" stroke-width="${width}" stroke-linecap="round" stroke-linejoin="round" />`;
+      });
+      
+      kuroContent += `</g>`;
+      
+      // 밝은 코어 라인 (얇은 흰색)
       const coreWidth = Math.max(1, 2 * scale);
-      kuroContent += `<path d="${pathData}" fill="none" stroke="#ffffff" stroke-width="${coreWidth}" stroke-linecap="round" stroke-linejoin="round" filter="url(#neonGlow)" opacity="0.9" />`;
+      kuroContent += `<g stroke="#ffffff" fill="none" filter="url(#neonGlow)" opacity="0.9">`;
+      
+      const coreWidths = [2, 1.5, 2, 1.5, 1, 2, 1.5, 2, 2, 1.5, 1, 1.5, 2, 1, 1, 1, 1.5, 1, 1, 1.5, 1, 1, 1, 1, 1, 1, 1, 1.5, 2, 1.5, 1, 1];
+      
+      paths.forEach((path, index) => {
+        const fullPath = index === 0 ? path : 'M' + path;
+        const width = Math.max(0.5, (coreWidths[index % coreWidths.length] || 1.5) * scale);
+        kuroContent += `<path d="${fullPath}" stroke-width="${width}" stroke-linecap="round" stroke-linejoin="round" />`;
+      });
+      
+      kuroContent += `</g>`;
       
       return kuroContent;
 
