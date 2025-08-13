@@ -22,56 +22,76 @@ function parseBoldText(line) {
 // --- SVG 배경 생성 함수 ---
 
 function generateBackgroundSVG(bgType, width, height) {
+  const seed = Math.floor(Math.random() * 1000);
+  
   switch (bgType) {
     case 'stars':
-      // [핵심 개선] 완전히 새로운 '성운(Nebula)' 테마 배경
-      const starDefs = `
+      const galaxyDefs = `
         <defs>
-          <filter id="nebula">
-            <feTurbulence type="fractalNoise" baseFrequency="0.015 0.03" numOctaves="3" seed="${Math.floor(Math.random() * 100)}" />
-            <feColorMatrix type="matrix" values="0 0 0 0 0.7  0 0 0 0 0.85  0 0 0 0 1  0 0 0 1 0" />
-            <feGaussianBlur stdDeviation="3" />
-          </filter>
           <filter id="starGlow">
-            <feGaussianBlur stdDeviation="1.5" />
+            <feGaussianBlur stdDeviation="1.5" result="coloredBlur" />
           </filter>
-          <radialGradient id="galaxyCore" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stop-color="#fff" stop-opacity="1" />
-            <stop offset="40%" stop-color="#aabfff" stop-opacity="0.8" />
-            <stop offset="100%" stop-color="#4b0082" stop-opacity="0" />
-          </radialGradient>
-           <linearGradient id="meteorGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+          <filter id="nebulaCloud" x="-50%" y="-50%" width="200%" height="200%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.02 0.05" numOctaves="4" seed="${seed}" result="turbulence" />
+            <feGaussianBlur in="turbulence" stdDeviation="15" result="softTurbulence" />
+            <feColorMatrix in="softTurbulence" type="matrix"
+              values="1 0 0 0 0
+                      0 1 0 0 0
+                      0 0 1 0 0
+                      0 0 0 2 -0.3" result="alphaChannel" />
+          </filter>
+          <linearGradient id="galaxyGradient" gradientTransform="rotate(${Math.random() * 360})">
+            <stop offset="20%" stop-color="#2d0e4d" />
+            <stop offset="45%" stop-color="#c1a2ff" />
+            <stop offset="50%" stop-color="#f0e8ff" />
+            <stop offset="55%" stop-color="#c1a2ff" />
+            <stop offset="80%" stop-color="#2d0e4d" />
+          </linearGradient>
+          <mask id="galaxyMask">
+            <rect x="0" y="0" width="${width}" height="${height}" fill="white" />
+            <rect x="0" y="0" width="${width}" height="${height}" fill="black" filter="url(#nebulaCloud)" />
+          </mask>
+          <linearGradient id="meteorGradient" x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" stop-color="rgba(200, 225, 255, 0)" />
             <stop offset="50%" stop-color="rgba(200, 225, 255, 0.8)" />
             <stop offset="100%" stop-color="#fff" />
           </linearGradient>
         </defs>
       `;
-      
-      let starsContent = starDefs;
-      starsContent += `<rect width="${width}" height="${height}" fill="#000004" />`;
-      starsContent += `<rect width="${width}" height="${height}" fill="#4a2a6b" filter="url(#nebula)" opacity="0.4" />`;
-      
-      const galaxyCenterX = width / 2 + (Math.random() - 0.5) * 100;
-      const galaxyCenterY = height / 2 + (Math.random() - 0.5) * 80;
-      const galaxySize = Math.min(width, height) * (Math.random() * 0.4 + 0.8);
-      
-      starsContent += `<circle cx="${galaxyCenterX}" cy="${galaxyCenterY}" r="${galaxySize}" fill="url(#galaxyCore)" opacity="0.5" />`;
 
-      // [개선] 더욱 다채로운 별 생성 로직
-      // 1. 아주 작은 배경 별들
-      for (let i = 0; i < 500; i++) {
-        starsContent += `<circle cx="${Math.random() * width}" cy="${Math.random() * height}" r="${Math.random() * 0.4 + 0.1}" fill="#fff" opacity="${Math.random() * 0.3 + 0.1}" />`;
-      }
-      // 2. 중간 크기의 밝은 별들
-      for (let i = 0; i < 100; i++) {
-        starsContent += `<circle cx="${Math.random() * width}" cy="${Math.random() * height}" r="${Math.random() * 0.8 + 0.2}" fill="#fff" opacity="${Math.random() * 0.5 + 0.3}" />`;
-      }
-      // 3. 크고 빛나는 별들
-      for (let i = 0; i < 15; i++) {
-        starsContent += `<circle cx="${Math.random() * width}" cy="${Math.random() * height}" r="${Math.random() * 1.2 + 0.5}" fill="#e0e8ff" filter="url(#starGlow)" opacity="${Math.random() * 0.5 + 0.5}" />`;
+      let starsContent = galaxyDefs;
+      starsContent += `<rect width="${width}" height="${height}" fill="#01010a" />`;
+      
+      starsContent += `<rect x="0" y="0" width="${width}" height="${height}" fill="url(#galaxyGradient)" mask="url(#galaxyMask)" opacity="0.6" />`;
+      
+      const galaxyBand = {
+          slope: (Math.random() - 0.5) * 0.8,
+          intercept: height / 2 + (Math.random() - 0.5) * (height * 0.4),
+          width: height * (Math.random() * 0.2 + 0.3)
+      };
+
+      const isInGalaxyBand = (x, y) => {
+          const lineY = galaxyBand.slope * x + galaxyBand.intercept;
+          return Math.abs(y - lineY) < galaxyBand.width / 2;
+      };
+
+      for (let i = 0; i < 2000; i++) {
+        const x = Math.random() * width;
+        const y = Math.random() * height;
+        if (isInGalaxyBand(x, y)) {
+           starsContent += `<circle cx="${x}" cy="${y}" r="${Math.random() * 0.5 + 0.1}" fill="#fff" opacity="${Math.random() * 0.7 + 0.2}" />`;
+        }
       }
 
+      for (let i = 0; i < 150; i++) {
+        starsContent += `<circle cx="${Math.random() * width}" cy="${Math.random() * height}" r="${Math.random() * 0.6 + 0.2}" fill="#e0e8ff" opacity="${Math.random() * 0.6 + 0.2}" />`;
+      }
+
+      for (let i = 0; i < 20; i++) {
+        const r = Math.random() * 1.0 + 0.4;
+        starsContent += `<circle cx="${Math.random() * width}" cy="${Math.random() * height}" r="${r}" fill="#f0f8ff" filter="url(#starGlow)" opacity="${Math.random() * 0.4 + 0.6}" />`;
+      }
+      
       const meteorCount = Math.floor(Math.random() * 3) + 1;
       for(let i=0; i < meteorCount; i++) {
           const startX = Math.random() * width;
@@ -81,8 +101,9 @@ function generateBackgroundSVG(bgType, width, height) {
           const meteorTransform = `rotate(${angle} ${startX} ${startY})`;
           starsContent += `<line x1="${startX}" y1="${startY}" x2="${startX + length}" y2="${startY}" stroke="url(#meteorGradient)" stroke-width="1.2" transform="${meteorTransform}" />`
       }
-      return starsContent;
 
+      return starsContent;
+    
     case 'matrix':
       const english = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
       const numbers = '0123456789';
@@ -138,12 +159,10 @@ function generateBackgroundSVG(bgType, width, height) {
       }
       return matrixContent;
       
-    // --- [수정된 부분] ---
     case 'default':
     default:
-      // 단순 검은색 배경으로 변경
+      // 단순 검은색 배경
       return `<rect width="${width}" height="${height}" fill="#000000" />`;
-    // --- [수정 끝] ---
   }
 }
 
@@ -158,13 +177,15 @@ const constants = {
 // --- 주 함수 핸들러 ---
 exports.handler = async function(event) {
   try {
+    // --- [수정된 부분] ---
     const defaultParams = {
       text: 'Dynamic {SVG} on Netlify|Special Chars: < & >',
       textColor: '#ffffff',
       fontSize: 16,
       align: 'left',
-      bg: 'stars',
+      bg: 'default', // 'stars'에서 'default'로 변경
     };
+    // --- [수정 끝] ---
     const queryParams = event.queryStringParameters || {};
     const params = { ...defaultParams, ...queryParams };
     
