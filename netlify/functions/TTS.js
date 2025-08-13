@@ -26,13 +26,13 @@ function generateBackgroundSVG(bgType, width, height) {
       const defs = `
         <defs>
           <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#2c2158" />
-            <stop offset="100%" stop-color="#000000" />
+            <stop offset="0%" stop-color="#1e1a3d" />
+            <stop offset="100%" stop-color="#0c0d24" />
           </linearGradient>
-          <radialGradient id="nebulaGradient" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stop-color="#70a0ff" stop-opacity="0.6" />
-            <stop offset="80%" stop-color="#3b76a8" stop-opacity="0.1" />
-            <stop offset="100%" stop-color="#3b76a8" stop-opacity="0" />
+          <radialGradient id="nebulaColors" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#d4b8ff" stop-opacity="1" />
+            <stop offset="40%" stop-color="#70a0ff" stop-opacity="0.8" />
+            <stop offset="100%" stop-color="#3b76a8" stop-opacity="0.3" />
           </radialGradient>
           <linearGradient id="meteorGradient" x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" stop-color="rgba(255,255,255,0)" />
@@ -42,40 +42,27 @@ function generateBackgroundSVG(bgType, width, height) {
           <filter id="starGlow">
             <feGaussianBlur stdDeviation="1.5" />
           </filter>
+          <filter id="nebulaFilter" x="-50%" y="-50%" width="200%" height="200%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.02 0.05" numOctaves="2" seed="${Math.floor(Math.random() * 10)}" result="turbulence" />
+            <feDisplacementMap in="SourceGraphic" in2="turbulence" scale="120" />
+          </filter>
         </defs>
       `;
       starsContent += defs;
+      
       starsContent += `<rect width="${width}" height="${height}" fill="url(#bgGradient)" />`;
-      starsContent += `<ellipse cx="${width / 2}" cy="${height / 2}" rx="${width * 0.7}" ry="${height * 0.2}" fill="url(#nebulaGradient)" transform="rotate(-45 ${width / 2} ${height / 2})" />`;
-
-      const starCount = 400;
-      const nebulaCenterX = width / 2;
-      const nebulaCenterY = height / 2;
-      const rotationAngle = -45 * Math.PI / 180;
-
-      for (let i = 0; i < starCount; i++) {
-        const x = Math.random() * width;
-        const y = Math.random() * height;
-        const rotatedX = Math.cos(-rotationAngle) * (x - nebulaCenterX) - Math.sin(-rotationAngle) * (y - nebulaCenterY) + nebulaCenterX;
-        const rotatedY = Math.sin(-rotationAngle) * (x - nebulaCenterX) + Math.cos(-rotationAngle) * (y - nebulaCenterY) + nebulaCenterY;
-        const dist = Math.abs(rotatedY - nebulaCenterY);
-        const spawnProb = Math.pow(Math.max(0, 1 - dist / (height * 0.3)), 2);
-
-        if (Math.random() < spawnProb) {
-          const r = Math.random() * 1.5 + 0.2;
-          const opacity = Math.random() * 0.5 + 0.5;
-          starsContent += `<circle cx="${x}" cy="${y}" r="${r}" fill="#fff" opacity="${opacity}" />`;
-        } else if (Math.random() < 0.2) {
-          const r = Math.random() * 0.8 + 0.1;
-          const opacity = Math.random() * 0.6 + 0.2;
-          starsContent += `<circle cx="${x}" cy="${y}" r="${r}" fill="#fff" opacity="${opacity}" />`;
-        }
+      starsContent += `<g filter="url(#nebulaFilter)">
+        <rect width="${width}" height="${height}" fill="url(#nebulaColors)" opacity="0.6" />
+      </g>`;
+      
+      for (let i = 0; i < 350; i++) {
+        starsContent += `<circle cx="${Math.random() * width}" cy="${Math.random() * height}" r="${Math.random() * 0.8 + 0.1}" fill="#fff" opacity="${Math.random() * 0.7 + 0.2}" />`;
       }
-      for(let i=0; i<10; i++) {
+      for(let i=0; i<12; i++) {
         const x = Math.random() * width;
         const y = Math.random() * height;
-        const r = Math.random() * 1.5 + 1;
-        starsContent += `<circle cx="${x}" cy="${y}" r="${r}" fill="#aaddff" filter="url(#starGlow)" />`;
+        const r = Math.random() * 1.5 + 0.8;
+        starsContent += `<circle cx="${x}" cy="${y}" r="${r}" fill="#d1e8ff" filter="url(#starGlow)" />`;
       }
       const meteorCount = Math.floor(Math.random() * 3) + 2;
       for(let i=0; i < meteorCount; i++) {
@@ -111,25 +98,20 @@ function generateBackgroundSVG(bgType, width, height) {
         const startY = Math.random() * height * 1.5 - height * 0.5;
         const streamLength = Math.floor(Math.random() * (height / matrixFontSize * 0.8)) + 10;
         
-        // [개선] 열(Column)마다 <text> 요소 하나만 생성
         let streamTspans = '';
         for (let j = 0; j < streamLength; j++) {
           const charIndex = Math.floor(Math.random() * matrixChars.length);
           const char = matrixChars[charIndex];
           const y = startY + j * matrixFontSize;
           if (y < 0 || y > height) continue;
-
           const isLeading = j === streamLength - 1;
           const color = isLeading ? '#c0ffc0' : '#00e030';
           const opacity = 0.1 + (j / streamLength) * 0.9;
-          
-          // [개선] 첫 문자는 절대 좌표(y), 나머지는 상대 좌표(dy)로 위치 지정
           const posAttr = j === 0 ? `y="${startY}"` : `dy="1.2em"`;
           streamTspans += `<tspan x="${x}" ${posAttr} fill="${color}" opacity="${opacity}">${escapeSVG(char)}</tspan>`;
         }
         
         if (streamTspans) {
-          // [개선] 공통 속성은 부모 <text>에 한 번만 적용
           matrixContent += `<text font-family="monospace" font-size="${matrixFontSize}px" filter="url(#matrixGlow)">${streamTspans}</text>`;
         }
       }
@@ -165,11 +147,11 @@ const constants = {
 exports.handler = async function(event) {
   try {
     const defaultParams = {
-      text: '대역폭이 최적화된 {Matrix} 배경입니다.',
+      text: '몽환적인 스타일의 {은하수} 배경입니다.|SVG 필터를 사용하여 구름을 표현했습니다.',
       textColor: '#ffffff',
       fontSize: 16,
-      align: 'center',
-      bg: 'matrix',
+      align: 'left',
+      bg: 'stars',
     };
     const queryParams = event.queryStringParameters || {};
     const params = { ...defaultParams, ...queryParams };
@@ -208,6 +190,7 @@ exports.handler = async function(event) {
         </style>
         ${backgroundContent}
         <text
+          x="${x}"
           y="${startY}"
           font-family="sans-serif"
           font-size="${fontSize}px"
