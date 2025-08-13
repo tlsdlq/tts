@@ -25,33 +25,40 @@ function generateBackgroundSVG(bgType, width, height) {
   const seed = Math.floor(Math.random() * 1000);
   
   switch (bgType) {
-    // --- [핵심 개선] '파도90 흑관' 스타일로 완전히 재설계된 'kuro' 테마 ---
     case 'kuro':
       const kuroDefs = `
         <defs>
           <filter id="kuroGlow">
-            <feGaussianBlur in="SourceGraphic" stdDeviation="5" />
+            <feGaussianBlur in="SourceGraphic" stdDeviation="4" />
           </filter>
           <filter id="kuroDistort">
-            <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" seed="${seed}" result="turbulence" />
-            <feDisplacementMap in="SourceGraphic" in2="turbulence" scale="8" xChannelSelector="R" yChannelSelector="G" />
+            <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="3" seed="${seed}" result="turbulence" />
+            <feDisplacementMap in="SourceGraphic" in2="turbulence" scale="6" xChannelSelector="R" yChannelSelector="G" />
           </filter>
+          <linearGradient id="coffinGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#101014" />
+            <stop offset="100%" stop-color="#000000" />
+          </linearGradient>
         </defs>
       `;
       
       let kuroContent = kuroDefs;
       kuroContent += `<rect width="${width}" height="${height}" fill="#000000" />`;
+      
+      const coffinPadding = Math.min(width, height) * 0.15;
+      const coffinX = coffinPadding;
+      const coffinY = coffinPadding;
+      const coffinWidth = width - coffinPadding * 2;
+      const coffinHeight = height - coffinPadding * 2;
+      kuroContent += `<rect x="${coffinX}" y="${coffinY}" width="${coffinWidth}" height="${coffinHeight}" fill="url(#coffinGradient)" />`;
 
       const paths = [];
-      const joints = []; // 꺾이는 지점을 저장할 배열
-      const maxDepth = 12; // 회로의 최대 복잡도 증가
+      const maxDepth = 8;
       
       function generateBranch(x, y, direction, depth) {
         if (depth > maxDepth) return;
-
-        // 현재 방향으로 뻗어 나갈 무작위 길이 결정
-        const length = Math.random() * (width / 5) + 30;
         
+        const length = Math.random() * (coffinWidth / 6) + 15;
         let endX = x;
         let endY = y;
 
@@ -62,62 +69,37 @@ function generateBackgroundSVG(bgType, width, height) {
           case 'right': endX += length; break;
         }
 
-        // 경로가 화면 밖으로 나갔는지 확인
-        const isOutOfBounds = endX < 0 || endX > width || endY < 0 || endY > height;
+        const isOutOfBounds = endX < coffinX || endX > coffinX + coffinWidth || endY < coffinY || endY > coffinY + coffinHeight;
         
-        if (isOutOfBounds) {
-          // 화면 밖으로 나갔다면, 경로를 화면 경계에서 자름
-          const clampedX = Math.max(0, Math.min(width, endX));
-          const clampedY = Math.max(0, Math.min(height, endY));
-          paths.push(`M${x},${y} L${clampedX},${clampedY}`);
-          return; // 경계에 닿으면 가지 성장을 멈춤
-        }
+        if (isOutOfBounds) return;
         
-        // 경로가 화면 안에 있다면, 경로와 조인트를 추가
         paths.push(`M${x},${y} L${endX},${endY}`);
-        joints.push({ cx: endX, cy: endY, r: Math.random() * 2 + 2 });
 
-        // 새로운 방향 (항상 90도 꺾임) 결정
         const newDirections = (direction === 'up' || direction === 'down') ? ['left', 'right'] : ['up', 'down'];
         
-        // 높은 확률로 양쪽 모두 가지를 뻗음
-        if (Math.random() > 0.2) {
-          generateBranch(endX, endY, newDirections[0], depth + 1);
+        if (Math.random() > 0.4) {
+           generateBranch(endX, endY, newDirections[0], depth + 1);
         }
-        if (Math.random() > 0.2) {
-          generateBranch(endX, endY, newDirections[1], depth + 1);
+        if (Math.random() > 0.4) {
+           generateBranch(endX, endY, newDirections[1], depth + 1);
         }
       }
 
-      const numStarters = Math.floor(width / 80);
-      // 상하좌우 모든 가장자리에서 회로 생성 시작
+      const numStarters = 15;
       for (let i = 0; i < numStarters; i++) {
-        generateBranch(Math.random() * width, height, 'up', 0);    // 아래에서 위로
-        generateBranch(Math.random() * width, 0, 'down', 0);     // 위에서 아래로
-        generateBranch(width, Math.random() * height, 'left', 0);   // 오른쪽에서 왼쪽으로
-        generateBranch(0, Math.random() * height, 'right', 0);  // 왼쪽에서 오른쪽으로
+        const startX = coffinX + Math.random() * coffinWidth;
+        const startY = coffinY + Math.random() * coffinHeight;
+        const directions = ['up', 'down', 'left', 'right'];
+        const startDir = directions[Math.floor(Math.random() * 4)];
+        generateBranch(startX, startY, startDir, 0);
       }
 
       const pathData = paths.join(' ');
       
-      // 1. 외부 글로우 (회로 + 조인트)
-      kuroContent += `<g filter="url(#kuroGlow)" opacity="0.6">`;
-      kuroContent += `<path d="${pathData}" stroke="#8a2be2" stroke-width="7" stroke-linecap="round" fill="none" />`;
-      joints.forEach(j => {
-        kuroContent += `<circle cx="${j.cx}" cy="${j.cy}" r="${j.r + 3}" fill="#8a2be2}" />`;
-      });
-      kuroContent += `</g>`;
-
-      // 2. 내부 네온 (회로 + 조인트)
-      kuroContent += `<g filter="url(#kuroDistort)">`;
-      kuroContent += `<path d="${pathData}" stroke="#e6c8ff" stroke-width="2.5" stroke-linecap="round" fill="none" />`;
-      joints.forEach(j => {
-        kuroContent += `<circle cx="${j.cx}" cy="${j.cy}" r="${j.r}" fill="#e6c8ff" />`;
-      });
-      kuroContent += `</g>`;
+      kuroContent += `<path d="${pathData}" stroke="#8a2be2" stroke-width="6" stroke-linecap="round" fill="none" opacity="0.6" filter="url(#kuroGlow)" />`;
+      kuroContent += `<path d="${pathData}" stroke="#e6c8ff" stroke-width="2" stroke-linecap="round" fill="none" filter="url(#kuroDistort)" />`;
 
       return kuroContent;
-    // --- [개선 끝] ---
 
     case 'stars':
       const galaxyDefs = `
@@ -293,8 +275,11 @@ exports.handler = async function(event) {
 
     const textElements = lines.map((line, index) => {
       const innerContent = parseBoldText(line);
-      const dy = index === 0 ? '0' : `${constants.lineHeight}em`;
-      return `<tspan x="${x}" dy="${dy}">${innerContent}</tspan>`;
+      if (index === 0) {
+        return `<tspan x="${x}" y="${startY}">${innerContent}</tspan>`;
+      } else {
+        return `<tspan x="${x}" dy="${constants.lineHeight}em">${innerContent}</tspan>`;
+      }
     }).join('');
 
     const mainTextStyle = `paint-order="stroke" stroke="#000000" stroke-width="2px" stroke-linejoin="round"`;
@@ -306,8 +291,6 @@ exports.handler = async function(event) {
         </style>
         ${backgroundContent}
         <text
-          x="${x}"
-          y="${startY}"
           font-family="sans-serif"
           font-size="${fontSize}px"
           fill="${textColor}"
