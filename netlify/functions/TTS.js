@@ -9,19 +9,15 @@ function escapeSVG(str) {
             .replace(/'/g, '&apos;');
 }
 
-// --- [수정된 부분 시작] ---
-// 일반 텍스트는 <tspan>으로 감싸지 않도록 수정하여 중첩 구조를 제거합니다.
 function parseBoldText(line) {
   if (typeof line !== 'string') return '';
   const parts = line.split(/\{([^}]+)\}/g).filter(part => part);
   return parts.map((part, index) => {
     const isBold = index % 2 === 1;
     const escapedPart = escapeSVG(part);
-    // 굵은 부분만 스타일링을 위해 <tspan>으로 감싸고, 일반 텍스트는 그대로 둡니다.
     return isBold ? `<tspan font-weight="700">${escapedPart}</tspan>` : escapedPart;
   }).join('');
 }
-// --- [수정된 부분 끝] ---
 
 // --- SVG 배경 생성 함수 ---
 
@@ -65,7 +61,6 @@ function generateBackgroundSVG(bgType, width, height) {
 
       let starsContent = galaxyDefs;
       starsContent += `<rect width="${width}" height="${height}" fill="#01010a" />`;
-      
       starsContent += `<rect x="0" y="0" width="${width}" height="${height}" fill="url(#galaxyGradient)" mask="url(#galaxyMask)" opacity="0.6" />`;
       
       const galaxyBand = {
@@ -204,7 +199,6 @@ exports.handler = async function(event) {
     const textElements = lines.map((line, index) => {
       const innerContent = parseBoldText(line);
       const dy = index === 0 ? '0' : `${constants.lineHeight}em`;
-      // innerContent가 더 이상 불필요한 <tspan>으로 감싸여 있지 않으므로 중앙 정렬이 올바르게 동작합니다.
       return `<tspan x="${x}" dy="${dy}">${innerContent}</tspan>`;
     }).join('');
 
@@ -217,7 +211,6 @@ exports.handler = async function(event) {
         </style>
         ${backgroundContent}
         <text
-          x="${x}"
           y="${startY}"
           font-family="sans-serif"
           font-size="${fontSize}px"
