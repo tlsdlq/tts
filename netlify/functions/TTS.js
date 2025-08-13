@@ -9,15 +9,19 @@ function escapeSVG(str) {
             .replace(/'/g, '&apos;');
 }
 
+// --- [수정된 부분 시작] ---
+// 일반 텍스트는 <tspan>으로 감싸지 않도록 수정하여 중첩 구조를 제거합니다.
 function parseBoldText(line) {
   if (typeof line !== 'string') return '';
   const parts = line.split(/\{([^}]+)\}/g).filter(part => part);
   return parts.map((part, index) => {
     const isBold = index % 2 === 1;
     const escapedPart = escapeSVG(part);
-    return isBold ? `<tspan font-weight="700">${escapedPart}</tspan>` : `<tspan>${escapedPart}</tspan>`;
+    // 굵은 부분만 스타일링을 위해 <tspan>으로 감싸고, 일반 텍스트는 그대로 둡니다.
+    return isBold ? `<tspan font-weight="700">${escapedPart}</tspan>` : escapedPart;
   }).join('');
 }
+// --- [수정된 부분 끝] ---
 
 // --- SVG 배경 생성 함수 ---
 
@@ -104,7 +108,6 @@ function generateBackgroundSVG(bgType, width, height) {
 
       return starsContent;
     
-    // --- [수정된 부분 시작] ---
     case 'matrix':
       const english = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
       const numbers = '0123456789';
@@ -117,7 +120,6 @@ function generateBackgroundSVG(bgType, width, height) {
       const columns = Math.floor(width / columnWidth);
       let matrixContent = '';
 
-      // 'leadingGlow' 필터 정의를 제거하고 'matrixGlow'만 남김
       const matrixDefs = `<defs><filter id="matrixGlow"><feGaussianBlur in="SourceGraphic" stdDeviation="1.0" result="blur" /></filter></defs>`;
       matrixContent += matrixDefs;
       matrixContent += `<rect width="${width}" height="${height}" fill="#000000" />`;
@@ -137,33 +139,28 @@ function generateBackgroundSVG(bgType, width, height) {
           const y = startY + j * matrixFontSize;
           if (y < 0 || y > height) continue;
           
-          // 선두 글자 구분 로직 제거, 모든 글자 색상 통일
           const color = '#00e030'; 
           const opacity = 0.1 + (j / streamLength) * 0.9;
           const posAttr = j === 0 ? `y="${startY}"` : `dy="1.2em"`;
 
           const tspan = `<tspan x="${x}" ${posAttr} fill="${color}" opacity="${opacity}">${escapeSVG(char)}</tspan>`;
           
-          // 모든 tspan을 하나의 배열에 추가
           streamTspans.push(tspan);
         }
         
-        // 하나의 <text> 요소로 모든 글자를 렌더링
         if (streamTspans.length > 0) {
           matrixContent += `<text font-family="monospace" font-size="${matrixFontSize}px" filter="url(#matrixGlow)">${streamTspans.join('')}</text>`;
         }
       }
       return matrixContent;
-    // --- [수정된 부분 끝] ---
 
     case 'default':
     default:
-      // 단순 검은색 배경
       return `<rect width="${width}" height="${height}" fill="#000000" />`;
   }
 }
 
-// --- 상수 ---
+// --- 상수 (기존 값 800px 유지) ---
 const constants = {
   width: 800,
   paddingX: 40,
@@ -207,6 +204,7 @@ exports.handler = async function(event) {
     const textElements = lines.map((line, index) => {
       const innerContent = parseBoldText(line);
       const dy = index === 0 ? '0' : `${constants.lineHeight}em`;
+      // innerContent가 더 이상 불필요한 <tspan>으로 감싸여 있지 않으므로 중앙 정렬이 올바르게 동작합니다.
       return `<tspan x="${x}" dy="${dy}">${innerContent}</tspan>`;
     }).join('');
 
