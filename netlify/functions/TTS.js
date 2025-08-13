@@ -25,16 +25,16 @@ function generateBackgroundSVG(bgType, width, height) {
   const seed = Math.floor(Math.random() * 1000);
   
   switch (bgType) {
-    // --- [신규 추가] 'kuro' 테마 ---
+    // --- [핵심 개선] '파도90 흑관' 스타일로 완전히 재설계된 'kuro' 테마 ---
     case 'kuro':
       const kuroDefs = `
         <defs>
           <filter id="kuroGlow">
-            <feGaussianBlur in="SourceGraphic" stdDeviation="4" />
+            <feGaussianBlur in="SourceGraphic" stdDeviation="5" />
           </filter>
           <filter id="kuroDistort">
-            <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="3" seed="${seed}" result="turbulence" />
-            <feDisplacementMap in="SourceGraphic" in2="turbulence" scale="6" xChannelSelector="R" yChannelSelector="G" />
+            <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" seed="${seed}" result="turbulence" />
+            <feDisplacementMap in="SourceGraphic" in2="turbulence" scale="8" xChannelSelector="R" yChannelSelector="G" />
           </filter>
         </defs>
       `;
@@ -43,13 +43,15 @@ function generateBackgroundSVG(bgType, width, height) {
       kuroContent += `<rect width="${width}" height="${height}" fill="#000000" />`;
 
       const paths = [];
-      const maxDepth = 7;
+      const joints = []; // 꺾이는 지점을 저장할 배열
+      const maxDepth = 12; // 회로의 최대 복잡도 증가
       
-      function generateBranch(x, y, direction, length, depth) {
-        if (depth > maxDepth || length < 10) {
-          return;
-        }
+      function generateBranch(x, y, direction, depth) {
+        if (depth > maxDepth) return;
 
+        // 현재 방향으로 뻗어 나갈 무작위 길이 결정
+        const length = Math.random() * (width / 5) + 30;
+        
         let endX = x;
         let endY = y;
 
@@ -60,41 +62,62 @@ function generateBackgroundSVG(bgType, width, height) {
           case 'right': endX += length; break;
         }
 
+        // 경로가 화면 밖으로 나갔는지 확인
+        const isOutOfBounds = endX < 0 || endX > width || endY < 0 || endY > height;
+        
+        if (isOutOfBounds) {
+          // 화면 밖으로 나갔다면, 경로를 화면 경계에서 자름
+          const clampedX = Math.max(0, Math.min(width, endX));
+          const clampedY = Math.max(0, Math.min(height, endY));
+          paths.push(`M${x},${y} L${clampedX},${clampedY}`);
+          return; // 경계에 닿으면 가지 성장을 멈춤
+        }
+        
+        // 경로가 화면 안에 있다면, 경로와 조인트를 추가
         paths.push(`M${x},${y} L${endX},${endY}`);
+        joints.push({ cx: endX, cy: endY, r: Math.random() * 2 + 2 });
 
-        // 확률적으로 새로운 가지 생성
-        if (Math.random() > 0.4) {
-          const newDirections = (direction === 'up' || direction === 'down') ? ['left', 'right'] : ['up', 'down'];
-          const newLength = length * (Math.random() * 0.3 + 0.6); // 60% ~ 90%
-          
-          if (Math.random() > 0.3) {
-             generateBranch(endX, endY, newDirections[0], newLength, depth + 1);
-          }
-          if (Math.random() > 0.3) {
-             generateBranch(endX, endY, newDirections[1], newLength, depth + 1);
-          }
+        // 새로운 방향 (항상 90도 꺾임) 결정
+        const newDirections = (direction === 'up' || direction === 'down') ? ['left', 'right'] : ['up', 'down'];
+        
+        // 높은 확률로 양쪽 모두 가지를 뻗음
+        if (Math.random() > 0.2) {
+          generateBranch(endX, endY, newDirections[0], depth + 1);
+        }
+        if (Math.random() > 0.2) {
+          generateBranch(endX, endY, newDirections[1], depth + 1);
         }
       }
 
-      // 여러 시작점에서 가지 생성
-      for(let i = 0; i < 5; i++) {
-        const startX = Math.random() * width;
-        generateBranch(startX, height, 'up', Math.random() * 80 + 50, 0);
-      }
-      for(let i = 0; i < 3; i++) {
-        const startY = Math.random() * height;
-        generateBranch(width, startY, 'left', Math.random() * 80 + 50, 0);
+      const numStarters = Math.floor(width / 80);
+      // 상하좌우 모든 가장자리에서 회로 생성 시작
+      for (let i = 0; i < numStarters; i++) {
+        generateBranch(Math.random() * width, height, 'up', 0);    // 아래에서 위로
+        generateBranch(Math.random() * width, 0, 'down', 0);     // 위에서 아래로
+        generateBranch(width, Math.random() * height, 'left', 0);   // 오른쪽에서 왼쪽으로
+        generateBranch(0, Math.random() * height, 'right', 0);  // 왼쪽에서 오른쪽으로
       }
 
       const pathData = paths.join(' ');
       
-      // 1. 외부 글로우 라인 (넓고, 흐릿하고, 어두운 보라색)
-      kuroContent += `<path d="${pathData}" stroke="#8a2be2" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.6" filter="url(#kuroGlow)" />`;
-      // 2. 내부 네온 라인 (얇고, 울렁이고, 밝은 보라색)
-      kuroContent += `<path d="${pathData}" stroke="#e6c8ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" filter="url(#kuroDistort)" />`;
+      // 1. 외부 글로우 (회로 + 조인트)
+      kuroContent += `<g filter="url(#kuroGlow)" opacity="0.6">`;
+      kuroContent += `<path d="${pathData}" stroke="#8a2be2" stroke-width="7" stroke-linecap="round" fill="none" />`;
+      joints.forEach(j => {
+        kuroContent += `<circle cx="${j.cx}" cy="${j.cy}" r="${j.r + 3}" fill="#8a2be2}" />`;
+      });
+      kuroContent += `</g>`;
+
+      // 2. 내부 네온 (회로 + 조인트)
+      kuroContent += `<g filter="url(#kuroDistort)">`;
+      kuroContent += `<path d="${pathData}" stroke="#e6c8ff" stroke-width="2.5" stroke-linecap="round" fill="none" />`;
+      joints.forEach(j => {
+        kuroContent += `<circle cx="${j.cx}" cy="${j.cy}" r="${j.r}" fill="#e6c8ff" />`;
+      });
+      kuroContent += `</g>`;
 
       return kuroContent;
-    // --- [추가 끝] ---
+    // --- [개선 끝] ---
 
     case 'stars':
       const galaxyDefs = `
